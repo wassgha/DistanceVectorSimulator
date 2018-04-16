@@ -18,7 +18,7 @@ public class Router
     public class TimedUpdate extends TimerTask {
       @Override
       public void run() {
-        System.out.println("Broadcasted updates... ");
+        System.out.println("➠ Broadcasted updates... ");
       }
     }
     
@@ -34,9 +34,10 @@ public class Router
     {
         
         Router router = new Router();
+        
         BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
         DatagramSocket clientSocket = new DatagramSocket();
-        InetAddress IPAddress = InetAddress.getByName("hostname");
+        InetAddress IPAddress = InetAddress.getByName("localhost");
         byte[] sendData = new byte[1024];
         byte[] receiveData = new byte[1024];
         String sentence = inFromUser.readLine();
@@ -46,19 +47,18 @@ public class Router
         DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);
         clientSocket.receive(receivePacket);
         String modifiedSentence = new String(receivePacket.getData());
-        System.out.println("FROM SERVER:" + modifiedSentence);
+        System.out.println("⇋ FROM SERVER:" + modifiedSentence);
         clientSocket.close();
     }
     
-    /**
-     * Constructor for objects of class Router
-     */
     public Router()
     {
-        Timer timer = new Timer();
-        timer.scheduleAtFixedRate(new TimedUpdate(), 0, updateInterval);
+        System.out.println("Router created!");
         
         initNeighbors("neighbors.txt");
+        
+        Timer timer = new Timer();
+        timer.scheduleAtFixedRate(new TimedUpdate(), 0, updateInterval);
     }
     
     public String buildMsg(int type, String content) {
@@ -90,17 +90,16 @@ public class Router
                 serverSocket.send(sendPacket);
             }
         } catch (Exception e) {
-            System.out.println("Error occured: ");
+            System.out.println("✖ Error occured: ");
             e.printStackTrace();
         }
-    }
-    
-    public void timedUpdateThread() {
     }
 
     public void initNeighbors(String file)
     {
+        System.out.println("⌛ Reading neighbor nodes...");
         // Read neighbors from file and store them in the initial dv
+        System.out.println("✓ Added node: IP , Port , Cost ");
         return;
     }
     

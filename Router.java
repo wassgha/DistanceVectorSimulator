@@ -2,12 +2,6 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-/**
- * Write a description of class Router here.
- *
- * @author (your name)
- * @version (a version number or a date)
- */
 public class Router
 {
     public class Node {
@@ -18,10 +12,37 @@ public class Router
     public class TimedUpdate extends TimerTask {
       @Override
       public void run() {
-        System.out.println("➠ Broadcasted updates... ");
+        System.out.println("➠ Broadcasting updates... ");
       }
     }
     
+    class InputLoopThread extends Thread {
+        InputLoopThread() {
+    
+        }
+        
+        public void run() {
+            try {
+                BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
+                DatagramSocket clientSocket = new DatagramSocket();
+                InetAddress IPAddress = InetAddress.getByName("localhost");
+                byte[] sendData = new byte[1024];
+                byte[] receiveData = new byte[1024];
+                String sentence = inFromUser.readLine();
+                sendData = sentence.getBytes();
+                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 9876);
+                clientSocket.send(sendPacket);
+                DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);
+                clientSocket.receive(receivePacket);
+                String modifiedSentence = new String(receivePacket.getData());
+                System.out.println("⇋ FROM SERVER:" + modifiedSentence);
+                clientSocket.close();
+            } catch (Exception e)  {
+                Router.alert(e);
+            }
+        }
+    }
+
     // instance variables
     private boolean poisonedReverse;
     private HashMap<Node, HashMap<Node, Integer>> dv;
@@ -32,23 +53,12 @@ public class Router
     
     public static void main(String args[]) throws Exception
     {
-        
         Router router = new Router();
-        
-        BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
-        DatagramSocket clientSocket = new DatagramSocket();
-        InetAddress IPAddress = InetAddress.getByName("localhost");
-        byte[] sendData = new byte[1024];
-        byte[] receiveData = new byte[1024];
-        String sentence = inFromUser.readLine();
-        sendData = sentence.getBytes();
-        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 9876);
-        clientSocket.send(sendPacket);
-        DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);
-        clientSocket.receive(receivePacket);
-        String modifiedSentence = new String(receivePacket.getData());
-        System.out.println("⇋ FROM SERVER:" + modifiedSentence);
-        clientSocket.close();
+    }
+    
+    public static void alert(Exception e) {
+        System.out.println("✖ Error occured: ");
+        e.printStackTrace();
     }
     
     public Router()
@@ -59,6 +69,10 @@ public class Router
         
         Timer timer = new Timer();
         timer.scheduleAtFixedRate(new TimedUpdate(), 0, updateInterval);
+        
+        listenerThread();
+        InputLoopThread inputLoop = new InputLoopThread();
+        inputLoop.run();
     }
     
     public String buildMsg(int type, String content) {
@@ -73,6 +87,7 @@ public class Router
     
     public void listenerThread() {
         try {
+            System.out.println("Listening on port 9876");
             DatagramSocket serverSocket = new DatagramSocket(9876);
             byte[] receiveData = new byte[1024];
             byte[] sendData = new byte[1024];
@@ -90,8 +105,7 @@ public class Router
                 serverSocket.send(sendPacket);
             }
         } catch (Exception e) {
-            System.out.println("✖ Error occured: ");
-            e.printStackTrace();
+            Router.alert(e);
         }
     }
 

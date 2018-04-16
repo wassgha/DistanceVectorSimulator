@@ -1,3 +1,6 @@
+import java.io.*;
+import java.net.*;
+import java.util.*;
 
 /**
  * Write a description of class Router here.
@@ -7,27 +10,62 @@
  */
 public class Router
 {
+    public class Node {
+        public String ip;
+        public Integer port;
+    }
+    
     // instance variables - replace the example below with your own
-    private int x;
-
+    private boolean poisonedReverse;
+    private HashMap<Node, HashMap<Node, Integer>> dv;
+    
+    
+    public static void main(String args[]) throws Exception
+    {
+        BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
+        DatagramSocket clientSocket = new DatagramSocket();
+        InetAddress IPAddress = InetAddress.getByName("hostname");
+        byte[] sendData = new byte[1024];
+        byte[] receiveData = new byte[1024];
+        String sentence = inFromUser.readLine();
+        sendData = sentence.getBytes();
+        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 9876);
+        clientSocket.send(sendPacket);
+        DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);
+        clientSocket.receive(receivePacket);
+        String modifiedSentence = new String(receivePacket.getData());
+        System.out.println("FROM SERVER:" + modifiedSentence);
+        clientSocket.close();
+    }
+    
     /**
      * Constructor for objects of class Router
      */
     public Router()
     {
-        // initialise instance variables
-        x = 0;
+        initNeighbors("neighbors.txt");
+    }
+    
+    public String buildMsg(int type, String content) {
+        return "";
+    }
+    
+    public void sendMsg() {
+    }
+    
+    public void inputThread() {
+    }
+    
+    public void listenerThread() {
+    }
+    
+    public void timedUpdateThread() {
     }
 
-    /**
-     * An example of a method - replace this comment with your own
-     *
-     * @param  y  a sample parameter for a method
-     * @return    the sum of x and y
-     */
-    public int sampleMethod(int y)
+    public void initNeighbors(String file)
     {
-        // put your code here
-        return x + y;
+        // Read neighbors from file and store them in the initial dv
+        return;
     }
+    
 }

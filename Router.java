@@ -4,8 +4,13 @@ import java.util.*;
 
 public class Router
 {
-    // Static methods
+    /**********************
+     *   Static Methods   *
+     **********************/
     
+    /*
+     * Validates the parameters and creates a router
+     */
     public static void main(String args[]) throws Exception
     {
         if (args.length < 1 || (args.length == 1 && args[0].equals("-reverse")))
@@ -28,22 +33,29 @@ public class Router
         System.exit(0);
     }
     
-    // Instance variables
+    /**********************
+     * Instance Variables *
+     **********************/
     
-    private boolean poisonedReverse;
+
     private HashMap<Node, DistanceVector> distanceTable;
-    private ArrayList<Node> neighbors;
-    private Timer timer;
-    private Node thisRouter;
-    private DatagramSocket socket;
     
-    private long updateInterval = 2000;
+    private Timer           timer;
+    private Node            thisRouter;
+    private DatagramSocket  socket;
+    private boolean         poisonedReverse;
+    private long            updateInterval = 2000;
     
-    // Child classes
+    /**********************
+     *   Child Classes    *
+     **********************/
     
+    /*
+     * Node
+     */
     public class Node {
         public InetAddress ip;
-        public int port;
+        public int  port;
         public long lastUpdated;
         
         Node(InetAddress ip, int port) {
@@ -53,20 +65,29 @@ public class Router
         }
     }
     
+    /*
+     * Alias type for a distance vector hash map
+     */
     public class DistanceVector extends HashMap<Node, Integer> {
         public DistanceVector() {
             super();
         }
     }
 
-    
     public class TimedUpdate extends TimerTask {
       @Override
       public void run() {
-        System.out.println("➠ Broadcasting updates... ");
+        System.out.println("➠ Broadcasting periodical updates... ");
       }
     }
     
+    /**********************
+     *      Threads       *
+     **********************/
+    
+    /*
+     * User input reading thread
+     */
     class InputLoopThread extends Thread {
         InputLoopThread() {
         }
@@ -94,8 +115,10 @@ public class Router
             }
         }
     }
-
     
+    /*
+     * Thread that listens for updates and incoming messages
+     */
     class ListenerThread extends Thread {
         ListenerThread() {
         }
@@ -108,10 +131,8 @@ public class Router
                 {
                     DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
                     socket.receive(receivePacket);
-                    String sentence = new String(receivePacket.getData());
-                    // InetAddress IPAddress = receivePacket.getAddress();
-                    // int rcvPort = receivePacket.getPort();
-                    System.out.println("Received data " + sentence);
+                    String data = new String(receivePacket.getData());
+                    System.out.println("Received data " + data);
                 }
             } catch (Exception e) {
                 Router.alert(e);
@@ -119,37 +140,31 @@ public class Router
         }
     }
     
-    // Instance methods
+    /**********************
+     *      Methods       *
+     **********************/
     
+    /*
+     * Constructor
+     */
     public Router(boolean poisonedReverse, String configFile)
     {
         this.poisonedReverse = poisonedReverse;
         
         initRouter(configFile);
         
-        Timer timer = new Timer();
-        timer.scheduleAtFixedRate(new TimedUpdate(), 0, updateInterval);
-        
         ListenerThread listener = new ListenerThread();
         listener.start();
         
         InputLoopThread inputLoop = new InputLoopThread();
         inputLoop.start();
-    }
-    
-    public String buildMsg(int type, String content) {
-        return "";
-    }
-    
-    public void sendMsg() {
-    }
-    
-    public void inputThread() {
+        
+        Timer timer = new Timer();
+        timer.scheduleAtFixedRate(new TimedUpdate(), updateInterval, updateInterval);
     }
 
     public void initRouter(String configFile)
     {
-        this.neighbors = new ArrayList<Node>();
         System.out.println("⌛ Reading neighbor nodes...");
         
         // Parse configuration file
@@ -172,11 +187,12 @@ public class Router
                 int port = input.nextInt();
                 int cost = input.nextInt();
                 
-                Node neighbor = new Node(ip, port); 
-                this.neighbors.add(neighbor);
+                Node neighbor = new Node(ip, port);
                 
                 dv.put(neighbor, cost);
                 this.distanceTable.put(neighbor, null);
+                
+                System.out.println("✓ Added node: IP (" + ip + ") , Port (" + port + "), Cost " + cost);
             }
             this.distanceTable.put(thisRouter, dv);
             
@@ -184,9 +200,8 @@ public class Router
         } catch (Exception e) {
             alert(e);
         }
-
         
-        System.out.println("✓ Added node: IP , Port , Cost ");
+        System.out.println("✓ Finished constructing initial distance table");
         
         try {
             this.socket = new DatagramSocket(thisRouter.port);
@@ -194,7 +209,7 @@ public class Router
             alert(e);
         }
         
-        System.out.println("\uD83D\uDCE1 Router created!");
+        System.out.println("\uD83D\uDCE1 Router deployed!");
     }
     
 }

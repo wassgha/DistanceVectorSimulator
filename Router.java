@@ -17,27 +17,32 @@ public class Router
     }
     
     class InputLoopThread extends Thread {
+        int port = 3000;
+        
         InputLoopThread() {
     
         }
         
         public void run() {
             try {
-                System.out.println("Listening on port 3000");
-                BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
-                DatagramSocket clientSocket = new DatagramSocket(3000);
-                InetAddress IPAddress = InetAddress.getByName("localhost");
-                byte[] sendData = new byte[1024];
-                byte[] receiveData = new byte[1024];
-                String sentence = inFromUser.readLine();
-                sendData = sentence.getBytes();
-                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 9876);
-                clientSocket.send(sendPacket);
-                DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);
-                clientSocket.receive(receivePacket);
-                String modifiedSentence = new String(receivePacket.getData());
-                System.out.println("⇋ FROM SERVER:" + modifiedSentence);
-                clientSocket.close();
+                System.out.println("\uD83C\uDF0D Listening on port " + port);
+                while(true)
+                {
+                    BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
+                    DatagramSocket clientSocket = new DatagramSocket(port);
+                    InetAddress IPAddress = InetAddress.getByName("localhost");
+                    byte[] sendData = new byte[1024];
+                    byte[] receiveData = new byte[1024];
+                    String sentence = inFromUser.readLine();
+                    sendData = sentence.getBytes();
+                    DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 9876);
+                    clientSocket.send(sendPacket);
+                    DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);
+                    clientSocket.receive(receivePacket);
+                    String modifiedSentence = new String(receivePacket.getData());
+                    System.out.println("⇋ FROM SERVER:" + modifiedSentence);
+                    clientSocket.close();
+                }
             } catch (Exception e)  {
                 Router.alert(e);
             }
@@ -46,14 +51,16 @@ public class Router
 
     
     class ListenerThread extends Thread {
+        int port = 9876;
+        
         ListenerThread() {
     
         }
         
         public void run() {
             try {
-                System.out.println("Listening on port 9876");
-                DatagramSocket serverSocket = new DatagramSocket(9876);
+                System.out.println("\uD83C\uDF0D Listening on port " + port);
+                DatagramSocket serverSocket = new DatagramSocket(port);
                 byte[] receiveData = new byte[1024];
                 byte[] sendData = new byte[1024];
                 while(true)
@@ -62,11 +69,10 @@ public class Router
                     serverSocket.receive(receivePacket);
                     String sentence = new String(receivePacket.getData());
                     InetAddress IPAddress = receivePacket.getAddress();
-                    int port = receivePacket.getPort();
+                    int rcvPort = receivePacket.getPort();
                     String capitalizedSentence = sentence.toUpperCase();
                     sendData = capitalizedSentence.getBytes();
-                    DatagramPacket sendPacket = new DatagramPacket(sendData,
-                    sendData.length, IPAddress, port);
+                    DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, rcvPort);
                     serverSocket.send(sendPacket);
                     System.out.println("Received data " + sentence);
                 }
@@ -96,7 +102,7 @@ public class Router
     
     public Router()
     {
-        System.out.println("Router created!");
+        System.out.println("\uD83D\uDCE1 Router created!");
         
         initNeighbors("neighbors.txt");
         

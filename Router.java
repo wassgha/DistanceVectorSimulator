@@ -10,6 +10,8 @@ public class Router
 
     /*
      * Validates the parameters and creates a router
+     *
+     * @param args command line arguments
      */
     public static void main(String args[]) throws Exception
     {
@@ -23,6 +25,8 @@ public class Router
 
     /*
      * Outputs pretty exceptions
+     *
+     * @param e exception to print out
      */
     public static void alert(Exception e) {
         System.out.println("✖ An error occured: ");
@@ -32,6 +36,8 @@ public class Router
 
     /*
      * Outputs pretty text-based errors
+     *
+     * @param e error message to print out
      */
     public static void alert(String e) {
         System.out.print("✖ An error occured: ");
@@ -56,17 +62,17 @@ public class Router
      **********************/
 
     /*
-     * Node
+     * Abstract representation of a node (Router)
      */
     public class Node {
-        public InetAddress ip;
-        public int  port;
-        public long lastUpdated;
+        public InetAddress  ip;
+        public int          port;
+        public long         lastUpdated;
 
         Node(InetAddress ip, int port) {
-            this.ip = ip;
-            this.port = port;
-            this.lastUpdated = new Date().getTime();
+            this.ip           = ip;
+            this.port         = port;
+            this.lastUpdated  = new Date().getTime();
         }
     }
 
@@ -120,7 +126,7 @@ public class Router
                     }
                 }
             } catch (Exception e)  {
-                Router.alert(e);
+                alert(e);
             }
         }
     }
@@ -155,7 +161,7 @@ public class Router
                     }
                 }
             } catch (Exception e) {
-                Router.alert(e);
+                alert(e);
             }
         }
     }
@@ -178,7 +184,11 @@ public class Router
      **********************/
 
     /*
-     * Constructor
+     * Constructor - Creates a router, initializes it and sets up routines
+     * for reading input, sending periodical updates and listening for messages
+     *
+     * @param poisonedReverse whether to use poisoned reverse or not
+     * @param configFile router's neighbors definition (path to a file)
      */
     public Router(boolean poisonedReverse, String configFile) {
 
@@ -226,9 +236,9 @@ public class Router
             // Read neighbors from file and store them in the initial dv
             DistanceVector dv = new DistanceVector();
             while(input.hasNext()) {
-                InetAddress ip = InetAddress.getByName(input.next());
-                int port = input.nextInt();
-                int cost = input.nextInt();
+                InetAddress ip  = InetAddress.getByName(input.next());
+                int port        = input.nextInt();
+                int cost        = input.nextInt();
 
                 Node neighbor = new Node(ip, port);
 

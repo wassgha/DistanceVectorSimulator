@@ -194,7 +194,7 @@ public class Router
 
         Timer timer = new Timer();
         timer.scheduleAtFixedRate(
-            new TimedUpdate(),
+            new TimedUpdateThread(),
             updateInterval,
             updateInterval
         );

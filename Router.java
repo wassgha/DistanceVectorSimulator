@@ -21,14 +21,20 @@ public class Router
         Router router = new Router(poisonedReverse, configFile);
     }
 
+    /*
+     * Outputs pretty exceptions
+     */
     public static void alert(Exception e) {
-        System.out.println("✖ Error occured: ");
+        System.out.println("✖ An error occured: ");
         e.printStackTrace();
         System.exit(0);
     }
 
+    /*
+     * Outputs pretty text-based errors
+     */
     public static void alert(String e) {
-        System.out.print("✖ Error occured: ");
+        System.out.print("✖ An error occured: ");
         System.out.println(e);
         System.exit(0);
     }
@@ -36,7 +42,6 @@ public class Router
     /**********************
      * Instance Variables *
      **********************/
-
 
     private HashMap<Node, DistanceVector> distanceTable;
 
@@ -47,7 +52,7 @@ public class Router
     private long            updateInterval = 2000;
 
     /**********************
-     *   Child Classes    *
+     *   Helper Classes    *
      **********************/
 
     /*
@@ -72,16 +77,6 @@ public class Router
         public DistanceVector() {
             super();
         }
-    }
-
-    public class TimedUpdate extends TimerTask {
-      @Override
-      public void run() {
-        System.out.println("➠ Broadcasting periodical updates... ");
-        synchronized(distanceTable) {
-          // TODO(@mestiasz) Send out distance table
-        }
-      }
     }
 
     /**********************
@@ -165,8 +160,21 @@ public class Router
         }
     }
 
+    /*
+     * Thread that runs periodically and sends updates to the node's neighbors
+     */
+    public class TimedUpdateThread extends TimerTask {
+      @Override
+      public void run() {
+        System.out.println("➠ Broadcasting periodical updates... ");
+        synchronized(distanceTable) {
+          // TODO(@mestiasz) Send out distance table
+        }
+      }
+    }
+
     /**********************
-     *      Methods       *
+     *    Main Methods    *
      **********************/
 
     /*
@@ -192,6 +200,12 @@ public class Router
         );
     }
 
+    /*
+     * initRouter - Configures and sets up the current router based on
+     * a given configuration file. Also initializes the default distance table.
+     *
+     * @param configFile path to the configuration file
+     */
     public void initRouter(String configFile) {
 
         System.out.println("⌛ Reading neighbor nodes...");
@@ -218,13 +232,21 @@ public class Router
 
                 Node neighbor = new Node(ip, port);
 
+                // Add the neighbor to the distance vector (as a column on the
+                // current router's row of the distance table)
                 dv.put(neighbor, cost);
-                this.distanceTable.put(neighbor, null);
+                // Add the neighbor as a new row of the distance table
+                this.distanceTable.put(
+                    neighbor,
+                    /* TODO(@mesitasz) this needs to be a dv intialized to INFINITY values */ null
+                );
 
                 System.out.println(
                   "✓ Added node: IP (" + ip + ") , Port (" + port + "), Cost " + cost
                 );
             }
+
+            // After adding all the neighbors to the dv, adds it to the distance table
             this.distanceTable.put(thisRouter, dv);
 
             input.close();
@@ -234,6 +256,7 @@ public class Router
 
         System.out.println("✓ Finished constructing initial distance table");
 
+        // Initialize the UDP Connection
         try {
             this.socket = new DatagramSocket(thisRouter.port);
         } catch (Exception e) {

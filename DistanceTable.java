@@ -8,6 +8,13 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
         super();
     }
 
+    /*
+     * Extends default put method to ensure all DistanceVectors
+     *  contain the same columns in order
+     *
+     * @param n node whose DV to update
+     * @param dv distance vector to be added
+     */
     public DistanceVector put(Node n, DistanceVector dv) {
       // Add fields from existing distance vectors to current one
       Iterator it = this.entrySet().iterator();
@@ -34,15 +41,23 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
       return super.put(n, dv);
     }
 
+    /*
+     * Takes string from socket, decodes it, and updates just the
+     *  row that was received
+     *
+     * @param data string encoded distance vector received from socket
+     */
     public void update(String data) {
       String[] lines = data.split("\n");
       if (lines.length == 0) return;
 
+      // Identifies sender of data
       String[] firstLine = lines[0].split(":");
       Node targetNode = getNode(firstLine[0], firstLine[1]);
       DistanceVector dv = this.get(targetNode);
       if (dv == null) return;
 
+      // Adds each entry in encoded string to DV object
       DistanceVector newDV = new DistanceVector();
       for (int i = 1; i < lines.length; i++) {
         String[] line = lines[i].split(",");
@@ -53,13 +68,21 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
       this.put(targetNode, newDV);
     }
 
-    public void calculate(Node router) {
+    /*
+     * Updates distance vector for given node
+     *
+     * @param router node whose distance vector to update
+     * @return new forwarding table for this node
+     */
+    public TreeMap<String, Node> calculate(Node router) {
       DistanceVector dv = new DistanceVector();
       dv.put(router.toString(), 0);
+      TreeMap<String, Node> forwardingTable = new TreeMap<String, Node>();
 
       Iterator it = this.entrySet().iterator();
       while (it.hasNext()) {
         Node neighbor = (Node)((Map.Entry) it.next()).getKey();
+        if (neighbor == router) continue;
 
         Iterator tmp = this.get(neighbor).entrySet().iterator();
         while (tmp.hasNext()) {
@@ -70,12 +93,21 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
 
           if (!entry.equals(router.toString()) && (dv.get(entry) == null || distance < dv.get(entry))) {
             dv.put(entry, distance);
+            forwardingTable.put(entry, neighbor);
           }
         }
       }
       this.put(router, dv);
+      return forwardingTable;
     }
 
+    /*
+     * Finds the node in the table given it's IP and port
+     *
+     * @param ip string version of INetAddress
+     * @param port string version of port #
+     * @return Node object for row in table
+     */
     public Node getNode(String ip, String port) {
       Iterator it = this.entrySet().iterator();
       while (it.hasNext()) {
@@ -85,6 +117,9 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
       return null;
     }
 
+    /*
+     * Converts TreeMap into nicely formatted string
+     */
     public String toString() {
       String result = "";
       Iterator it = this.entrySet().iterator();

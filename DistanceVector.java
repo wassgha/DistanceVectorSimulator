@@ -8,6 +8,11 @@ public class DistanceVector extends TreeMap<String, Integer> {
         super();
     }
 
+    /*
+     * Converts the distance vector to a string by key,value pairs
+     *
+     * @return encoded string
+     */
     public String encode() {
       String result = "";
       Iterator it = this.entrySet().iterator();
@@ -18,6 +23,11 @@ public class DistanceVector extends TreeMap<String, Integer> {
       return result;
     }
 
+    /*
+     * Converts distance vector to nicely formatted string for logging
+     *
+     * @return pretty printed string
+     */
     public String toString() {
       String result = "";
       Iterator it = this.entrySet().iterator();

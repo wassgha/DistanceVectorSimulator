@@ -49,7 +49,7 @@ public class Router
      **********************/
 
     private DistanceTable distanceTable;
-    private HashMap<Node, Integer> neighbors;
+    private TreeMap<String, Node> forwardingTable;
 
     private Timer           timer;
     private Node            thisRouter;
@@ -115,9 +115,11 @@ public class Router
                     synchronized(distanceTable) {
                       // TODO(@mestiasz) Update distance table
                       distanceTable.update(data);
-                      distanceTable.calculate(thisRouter);
+                      forwardingTable = distanceTable.calculate(thisRouter);
                       System.out.println("UPDATED DISTANCE TABLE");
                       System.out.println(distanceTable);
+                      System.out.println("FORWARDING TABLE");
+                      System.out.println(forwardingTable);
                     }
                 }
             } catch (Exception e) {

@@ -45,7 +45,6 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
 
       DistanceVector newDV = new DistanceVector();
       for (int i = 1; i < lines.length; i++) {
-        // System.out.println(lines[i]);
         String[] line = lines[i].split(",");
         String entry = line[0];
         Integer cost = Integer.parseInt(line[1].trim());
@@ -65,12 +64,16 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
         Iterator tmp = this.get(neighbor).entrySet().iterator();
         while (tmp.hasNext()) {
           String entry = (String)((Map.Entry) tmp.next()).getKey();
-          int distance = neighbor.cost + this.get(neighbor).get(entry);
+          // Don't add neighbor cost if value is infinity (causes overflow that messes up min calculation)
+          int distance = this.get(neighbor).get(entry);
+          if (distance != Integer.MAX_VALUE) distance += neighbor.cost;
+
           if (!entry.equals(router.toString()) && (dv.get(entry) == null || distance < dv.get(entry))) {
             dv.put(entry, distance);
           }
         }
       }
+      this.put(router, dv);
     }
 
     public Node getNode(String ip, String port) {

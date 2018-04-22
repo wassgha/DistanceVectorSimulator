@@ -8,6 +8,16 @@ public class DistanceVector extends TreeMap<String, Integer> {
         super();
     }
 
+    public String encode() {
+      String result = "";
+      Iterator it = this.entrySet().iterator();
+      while (it.hasNext()) {
+        String tmp = (String)((Map.Entry) it.next()).getKey();
+        result += "\n" + tmp + "," + this.get(tmp);
+      }
+      return result;
+    }
+
     public String toString() {
       String result = "";
       Iterator it = this.entrySet().iterator();

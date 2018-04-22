@@ -75,26 +75,10 @@ public class Router
                     BufferedReader inFromUser = new BufferedReader(
                       new InputStreamReader(System.in)
                     );
-                    byte[] sendData = new byte[1024];
                     String sentence = inFromUser.readLine();
-                    sendData = sentence.getBytes();
 
                     synchronized(distanceTable) {
-                      // Get all neighboring nodes from the distance table
-                      DistanceVector dv = distanceTable.get(thisRouter);
-                      Iterator it = dv.entrySet().iterator();
-
-                      // Broadcast the message to all neighboring nodes
-                      while (it.hasNext()) {
-                          Node neighbor = (Node)((Map.Entry) it.next()).getKey();
-                          DatagramPacket sendPacket = new DatagramPacket(
-                              sendData,
-                              sendData.length,
-                              neighbor.ip,
-                              neighbor.port
-                          );
-                          socket.send(sendPacket);
-                      }
+                      broadcast(sentence);
                     }
                 }
             } catch (Exception e)  {
@@ -130,6 +114,10 @@ public class Router
 
                     synchronized(distanceTable) {
                       // TODO(@mestiasz) Update distance table
+                      distanceTable.update(data);
+                      distanceTable.calculate(thisRouter);
+                      System.out.println("UPDATED DISTANCE TABLE");
+                      System.out.println(distanceTable);
                     }
                 }
             } catch (Exception e) {
@@ -147,6 +135,9 @@ public class Router
         System.out.println("➠ Broadcasting periodical updates... ");
         synchronized(distanceTable) {
           // TODO(@mestiasz) Send out distance table
+          DistanceVector dv = distanceTable.get(thisRouter);
+          // System.out.println("Broadcast " + dv.encode() + "END" + thisRouter.toString());
+          broadcast(thisRouter.toString() + dv.encode());
         }
       }
     }
@@ -250,4 +241,26 @@ public class Router
         System.out.println("\uD83D\uDCE1 Router deployed!");
     }
 
+    public void broadcast(String message) {
+      try {
+        // Get all neighboring nodes from the distance table
+        Iterator it = this.distanceTable.entrySet().iterator();
+
+        // Broadcast the message to all neighboring nodes
+        while (it.hasNext()) {
+          Node neighbor = (Node)((Map.Entry) it.next()).getKey();
+          // Don't broadcast to self
+          if (neighbor == thisRouter) continue;
+          DatagramPacket sendPacket = new DatagramPacket(
+              message.getBytes(),
+              message.getBytes().length,
+              neighbor.ip,
+              neighbor.port
+          );
+          socket.send(sendPacket);
+        }
+      } catch (Exception e) {
+        alert(e);
+      }
+    }
 }

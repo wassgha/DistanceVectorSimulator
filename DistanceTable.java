@@ -15,8 +15,8 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
         Node neighbor = (Node)((Map.Entry) it.next()).getKey();
         Iterator tmp = this.get(neighbor).entrySet().iterator();
         while (tmp.hasNext()) {
-          Node entry = (Node)((Map.Entry) tmp.next()).getKey();
-          if (!dv.containsKey(entry)) dv.put(entry.toString(), Integer.MAX_VALUE);
+          String entry = (String)((Map.Entry) tmp.next()).getKey();
+          if (!dv.containsKey(entry)) dv.put(entry, Integer.MAX_VALUE);
         }
       }
 
@@ -34,12 +34,60 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
       return super.put(n, dv);
     }
 
-    public String toString() {
-      String result = "\t\t|\t";
+    public void update(String data) {
+      String[] lines = data.split("\n");
+      if (lines.length == 0) return;
+
+      String[] firstLine = lines[0].split(":");
+      Node targetNode = getNode(firstLine[0], firstLine[1]);
+      DistanceVector dv = this.get(targetNode);
+      if (dv == null) return;
+
+      DistanceVector newDV = new DistanceVector();
+      for (int i = 1; i < lines.length; i++) {
+        // System.out.println(lines[i]);
+        String[] line = lines[i].split(",");
+        String entry = line[0];
+        Integer cost = Integer.parseInt(line[1].trim());
+        newDV.put(entry, cost);
+      }
+      this.put(targetNode, newDV);
+    }
+
+    public void calculate(Node router) {
+      DistanceVector dv = new DistanceVector();
+      dv.put(router.toString(), 0);
+
+      Iterator it = this.entrySet().iterator();
+      while (it.hasNext()) {
+        Node neighbor = (Node)((Map.Entry) it.next()).getKey();
+
+        Iterator tmp = this.get(neighbor).entrySet().iterator();
+        while (tmp.hasNext()) {
+          String entry = (String)((Map.Entry) tmp.next()).getKey();
+          int distance = neighbor.cost + this.get(neighbor).get(entry);
+          if (!entry.equals(router.toString()) && (dv.get(entry) == null || distance < dv.get(entry))) {
+            dv.put(entry, distance);
+          }
+        }
+      }
+    }
+
+    public Node getNode(String ip, String port) {
       Iterator it = this.entrySet().iterator();
       while (it.hasNext()) {
         Node tmp = (Node)((Map.Entry) it.next()).getKey();
-        System.out.println(tmp.toString() + " (Cost " + tmp.cost + ")\t|\t" + this.get(tmp));
+        if (tmp.ip.toString().equals(ip) && ("" + tmp.port).equals(port)) return tmp;
+      }
+      return null;
+    }
+
+    public String toString() {
+      String result = "";
+      Iterator it = this.entrySet().iterator();
+      while (it.hasNext()) {
+        Node tmp = (Node)((Map.Entry) it.next()).getKey();
+        result += tmp.toString() + " (Cost " + tmp.cost + ")\t|\t" + this.get(tmp) + "\n";
       }
       return result;
     }

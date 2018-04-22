@@ -167,13 +167,6 @@ public class Router
 
         initRouter(configFile);
 
-        System.out.println("NEIGHBORS");
-        Iterator it = this.neighbors.entrySet().iterator();
-        while (it.hasNext()) {
-          Node tmp = (Node)((Map.Entry) it.next()).getKey();
-          System.out.println(tmp.ip + ":" + tmp.port + " - " + this.neighbors.get(tmp));
-        }
-
         System.out.println("\n\n\nDISTANCE TABLE");
         System.out.println(this.distanceTable);
 
@@ -208,51 +201,33 @@ public class Router
             // Read this router's configuration
             InetAddress thisIp = InetAddress.getByName(input.next());
             int thisPort = input.nextInt();
-            this.thisRouter = new Node(thisIp, thisPort);
+            this.thisRouter = new Node(thisIp, thisPort, 0);
 
             // Initialize distance table and neighbor list
             this.distanceTable = new DistanceTable();
-            this.neighbors = new HashMap<Node, Integer>();
 
             // Read neighbors from file and store them in the initial dv
             DistanceVector dv = new DistanceVector();
             // Add self as node in DV
-            Node thisNode = new Node(thisIp, thisPort);
-            dv.put(thisNode, 0);
+            dv.put(thisIp + ":" + thisPort, 0);
 
             while(input.hasNext()) {
                 InetAddress ip  = InetAddress.getByName(input.next());
                 int port        = input.nextInt();
                 int cost        = input.nextInt();
 
-                Node neighbor = new Node(ip, port);
+                Node neighbor = new Node(ip, port, cost);
 
                 // Add the neighbor to the distance vector (as a column on the
                 // current router's row of the distance table)
-                dv.put(neighbor, cost);
-                // Also add node to list of neighbors
-                // This is separate because the DV weight can change, but this is static
-                this.neighbors.put(neighbor, cost);
+                dv.put(neighbor.toString(), cost);
+                // Also add node to distance table
+                // Since the rows of the table are neighbors
+                this.distanceTable.put(neighbor, new DistanceVector());
 
                 System.out.println(
                   "✓ Added node: IP (" + ip + ") , Port (" + port + "), Cost " + cost
                 );
-            }
-
-            // Create vector of all infinity for initial values of neighbor nodes
-            DistanceVector infinityVector = new DistanceVector();
-            infinityVector.put(thisNode, Integer.MAX_VALUE);
-            Iterator it = this.neighbors.entrySet().iterator();
-            while (it.hasNext()) {
-              Node tmp = (Node)((Map.Entry) it.next()).getKey();
-              infinityVector.put(tmp, Integer.MAX_VALUE);
-            }
-
-            // Set infinityVector as vector for each neighbor in distance table
-            it = this.neighbors.entrySet().iterator();
-            while (it.hasNext()) {
-              Node tmp = (Node)((Map.Entry) it.next()).getKey();
-              this.distanceTable.put(tmp, infinityVector);
             }
 
             // After adding all the neighbors to the dv, adds it to the distance table

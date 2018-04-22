@@ -50,12 +50,13 @@ public class Router
      **********************/
 
     private HashMap<Node, DistanceVector> distanceTable;
+    private HashMap<Node, Integer> neighbors;
 
     private Timer           timer;
     private Node            thisRouter;
     private DatagramSocket  socket;
     private boolean         poisonedReverse;
-    private long            updateInterval = 2000;
+    private long            updateInterval = 10000;
 
     /**********************
      *   Helper Classes    *
@@ -82,6 +83,16 @@ public class Router
     public class DistanceVector extends HashMap<Node, Integer> {
         public DistanceVector() {
             super();
+        }
+
+        public String toString() {
+          String result = "";
+          Iterator it = this.entrySet().iterator();
+          while (it.hasNext()) {
+            Node tmp = (Node)((Map.Entry) it.next()).getKey();
+            result += tmp.ip + ":" + tmp.port + " - " + this.get(tmp) + "\n";
+          }
+          return result;
         }
     }
 
@@ -191,7 +202,6 @@ public class Router
      * @param configFile router's neighbors definition (path to a file)
      */
     public Router(boolean poisonedReverse, String configFile) {
-
         this.poisonedReverse = poisonedReverse;
 
         initRouter(configFile);
@@ -217,7 +227,6 @@ public class Router
      * @param configFile path to the configuration file
      */
     public void initRouter(String configFile) {
-
         System.out.println("⌛ Reading neighbor nodes...");
 
         // Parse configuration file
@@ -235,6 +244,9 @@ public class Router
 
             // Read neighbors from file and store them in the initial dv
             DistanceVector dv = new DistanceVector();
+            Node thisNode = new Node(thisIp, thisPort);
+            dv.put(thisNode, 0);
+
             while(input.hasNext()) {
                 InetAddress ip  = InetAddress.getByName(input.next());
                 int port        = input.nextInt();

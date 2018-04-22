@@ -110,15 +110,16 @@ public class Router
                     );
                     socket.receive(receivePacket);
                     String data = new String(receivePacket.getData());
-                    System.out.println("Received data : " + data);
+                    System.out.println("⇅ RECEIVED DATA");
+                    System.out.println(data);
 
                     synchronized(distanceTable) {
                       // TODO(@mestiasz) Update distance table
                       distanceTable.update(data);
                       forwardingTable = distanceTable.calculate(thisRouter);
-                      System.out.println("UPDATED DISTANCE TABLE");
+                      System.out.println("⟳ Updated distance table");
                       System.out.println(distanceTable);
-                      System.out.println("FORWARDING TABLE");
+                      System.out.println("⟳ Updated forwarding table");
                       System.out.println(forwardingTable);
                     }
                 }
@@ -160,7 +161,7 @@ public class Router
 
         initRouter(configFile);
 
-        System.out.println("\n\n\nDISTANCE TABLE");
+        System.out.println("⚐ Initial Distance Table");
         System.out.println(this.distanceTable);
 
         ListenerThread listener = new ListenerThread();

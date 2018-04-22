@@ -124,8 +124,11 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
       String result = "";
       Iterator it = this.entrySet().iterator();
       while (it.hasNext()) {
-        Node tmp = (Node)((Map.Entry) it.next()).getKey();
-        result += tmp.toString() + " (Cost " + tmp.cost + ")\t|\t" + this.get(tmp) + "\n";
+        Node node = (Node)((Map.Entry) it.next()).getKey();
+        result += node.toString() 
+                    + " (Cost " + node.cost + ")\t|\t" 
+                    + this.get(node) 
+                    + (it.hasNext() ? "\n" : "");
       }
       return result;
     }

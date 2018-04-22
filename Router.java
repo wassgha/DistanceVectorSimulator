@@ -13,8 +13,7 @@ public class Router
      *
      * @param args command line arguments
      */
-    public static void main(String args[]) throws Exception
-    {
+    public static void main(String args[]) throws Exception {
         if (args.length < 1 || (args.length == 1 && args[0].equals("-reverse")))
             alert("Usage: java Router [-reverse] configFile");
 
@@ -49,7 +48,7 @@ public class Router
      * Instance Variables *
      **********************/
 
-    private HashMap<Node, DistanceVector> distanceTable;
+    private DistanceTable distanceTable;
     private HashMap<Node, Integer> neighbors;
 
     private Timer           timer;
@@ -57,44 +56,6 @@ public class Router
     private DatagramSocket  socket;
     private boolean         poisonedReverse;
     private long            updateInterval = 10000;
-
-    /**********************
-     *   Helper Classes    *
-     **********************/
-
-    /*
-     * Abstract representation of a node (Router)
-     */
-    public class Node {
-        public InetAddress  ip;
-        public int          port;
-        public long         lastUpdated;
-
-        Node(InetAddress ip, int port) {
-            this.ip           = ip;
-            this.port         = port;
-            this.lastUpdated  = new Date().getTime();
-        }
-    }
-
-    /*
-     * Alias type for a distance vector hash map
-     */
-    public class DistanceVector extends HashMap<Node, Integer> {
-        public DistanceVector() {
-            super();
-        }
-
-        public String toString() {
-          String result = "";
-          Iterator it = this.entrySet().iterator();
-          while (it.hasNext()) {
-            Node tmp = (Node)((Map.Entry) it.next()).getKey();
-            result += tmp.ip + ":" + tmp.port + " - " + this.get(tmp) + "\n";
-          }
-          return result;
-        }
-    }
 
     /**********************
      *      Threads       *
@@ -214,11 +175,7 @@ public class Router
         }
 
         System.out.println("\n\n\nDISTANCE TABLE");
-        it = this.distanceTable.entrySet().iterator();
-        while (it.hasNext()) {
-          Node tmp = (Node)((Map.Entry) it.next()).getKey();
-          System.out.println(this.distanceTable.get(tmp));
-        }
+        System.out.println(this.distanceTable);
 
         ListenerThread listener = new ListenerThread();
         listener.start();
@@ -254,7 +211,7 @@ public class Router
             this.thisRouter = new Node(thisIp, thisPort);
 
             // Initialize distance table and neighbor list
-            this.distanceTable = new HashMap<Node, DistanceVector>();
+            this.distanceTable = new DistanceTable();
             this.neighbors = new HashMap<Node, Integer>();
 
             // Read neighbors from file and store them in the initial dv

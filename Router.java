@@ -4,6 +4,7 @@ import java.util.*;
 
 public class Router
 {
+
     /**********************
      *   Static Methods   *
      **********************/
@@ -19,7 +20,13 @@ public class Router
 
         boolean poisonedReverse = args[0].equals("-reverse");
         String configFile = args[0].equals("-reverse") ? args[1] : args[0];
-        Router router = new Router(poisonedReverse, configFile);
+
+        boolean logger = true;
+        if ((args.length == 2 && !args[0].equals("-reverse")) || args.length > 2) {
+            logger = args[0].equals("-reverse") ? args[2].equals("true") : args[1].equals("true");
+        }
+
+        Router router = new Router(poisonedReverse, configFile, logger);
     }
 
     /*
@@ -28,7 +35,7 @@ public class Router
      * @param e exception to print out
      */
     public static void alert(Exception e) {
-        System.out.println("✖ An error occured: ");
+        System.out.print("✖ An error occured: ");
         e.printStackTrace();
         System.exit(0);
     }
@@ -40,7 +47,7 @@ public class Router
      */
     public static void alert(String e) {
         System.out.print("✖ An error occured: ");
-        System.out.println(e);
+        System.out.print(e);
         System.exit(0);
     }
 
@@ -56,6 +63,7 @@ public class Router
     private DatagramSocket  socket;
     private boolean         poisonedReverse;
     private long            updateInterval = 10000;
+    private boolean         logger = true;
 
     /**********************
      *      Threads       *
@@ -96,7 +104,7 @@ public class Router
 
         public void run() {
             try {
-                System.out.println(
+                log(
                     "\uD83C\uDF0D Listening on port " + thisRouter.port
                 );
 
@@ -110,17 +118,17 @@ public class Router
                     );
                     socket.receive(receivePacket);
                     String data = new String(receivePacket.getData());
-                    System.out.println("⇅ RECEIVED DATA");
-                    System.out.println(data);
+                    log("⇅ RECEIVED DATA");
+                    log(data);
 
                     synchronized(distanceTable) {
                       // TODO(@mestiasz) Update distance table
                       distanceTable.update(data);
                       forwardingTable = distanceTable.calculate(thisRouter);
-                      System.out.println("⟳ Updated distance table");
-                      System.out.println(distanceTable);
-                      System.out.println("⟳ Updated forwarding table");
-                      System.out.println(forwardingTable);
+                      log("⟳ Updated distance table");
+                      log(distanceTable.toString());
+                      log("⟳ Updated forwarding table");
+                      log(forwardingTable.toString());
                     }
                 }
             } catch (Exception e) {
@@ -135,11 +143,11 @@ public class Router
     public class TimedUpdateThread extends TimerTask {
       @Override
       public void run() {
-        System.out.println("➠ Broadcasting periodical updates... ");
+        log("➠ Broadcasting periodical updates... ");
         synchronized(distanceTable) {
           // TODO(@mestiasz) Send out distance table
           DistanceVector dv = distanceTable.get(thisRouter);
-          // System.out.println("Broadcast " + dv.encode() + "END" + thisRouter.toString());
+          // log("Broadcast " + dv.encode() + "END" + thisRouter.toString());
           broadcast(thisRouter.toString() + dv.encode());
         }
       }
@@ -156,13 +164,14 @@ public class Router
      * @param poisonedReverse whether to use poisoned reverse or not
      * @param configFile router's neighbors definition (path to a file)
      */
-    public Router(boolean poisonedReverse, String configFile) {
+    public Router(boolean poisonedReverse, String configFile, boolean logger) {
         this.poisonedReverse = poisonedReverse;
+        this.logger = logger;
 
         initRouter(configFile);
 
         System.out.println("⚐ Initial Distance Table");
-        System.out.println(this.distanceTable);
+        System.out.println(this.distanceTable.toString());
 
         ListenerThread listener = new ListenerThread();
         listener.start();
@@ -265,5 +274,11 @@ public class Router
       } catch (Exception e) {
         alert(e);
       }
+    }
+
+    public void log (String str) {
+        if (this.logger) {
+            System.out.println(str);
+        }
     }
 }

@@ -31,10 +31,6 @@ public class DistanceVector extends TreeMap<String, Integer> {
     public String toString() {
       String result = "";
       Iterator it = this.entrySet().iterator();
-      // while (it.hasNext()) {
-      //   Node tmp = (Node)((Map.Entry) it.next()).getKey();
-      //   result += tmp.ip + ":" + tmp.port + " - " + this.get(tmp) + "\n";
-      // }
       while (it.hasNext()) {
         String ip = (String)((Map.Entry) it.next()).getKey();
         String formattedEntry = 

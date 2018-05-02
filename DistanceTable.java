@@ -1,11 +1,16 @@
+import java.net.Inet4Address;
 import java.util.*;
 
 /*
  * Alias type for a distance table hash map
  */
 public class DistanceTable extends TreeMap<Node, DistanceVector> {
-    public DistanceTable() {
+    private Router router;
+
+    public DistanceTable(Router router) {
         super();
+
+        this.router = router;
     }
 
     /*
@@ -63,9 +68,53 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
         String[] line = lines[i].split(",");
         String entry = line[0];
         Integer cost = Integer.parseInt(line[1].trim());
+
         newDV.put(entry, cost);
+        
       }
       this.put(targetNode, newDV);
+      this.recalculate();
+    }
+
+    public void updateSelf(String destIp, int destPort, int cost) {
+      DistanceVector dv = this.get(router.node());
+      dv.put(destIp + ":" + destPort, cost);
+    }
+
+    public void recalculate () {
+      // calculate min and update
+      DistanceVector self = this.get(router.node());
+      DistanceVector newDv = new DistanceVector();
+      Set<String> keys = self.keySet();
+      String address = router.node().ip + ":" + router.node().port;
+      System.out.println("\n\n\n");
+
+      for (String i: keys) {  
+        System.out.println("KEY:\t" + i);
+  
+        int min = Integer.MAX_VALUE;
+        for (String j: keys) {
+          String[] chunks = j.split(":");
+          int c = this.get(getNode(chunks[0], chunks[1])).get(address);
+          int d = this.get(getNode(chunks[0], chunks[1])).get(i);
+
+          min = c + d < min && (c + d) >= 0 ? (c + d) : min;
+
+          // System.out.println("HERE IT STARTS----");
+          // System.out.println("C(x, j):\t" + c);
+          // System.out.println("Dj(i):\t\t" + d);
+          // System.out.println("Cost:\t\t" + cost);
+          // System.out.println("NOO, HERE IT ENDS----");
+        }
+
+        newDv.put(i, min);
+        // System.out.println("MIN:\t" + min + "\n");
+      }
+      
+      this.put(router.node(), newDv);
+      // System.out.println("\n\n\n");
+      // System.out.println(this);
+      // System.out.println("\n\n\n");
     }
 
     /*

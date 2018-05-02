@@ -2,11 +2,10 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-public class Router
-{
+public class Router {
 
     /**********************
-     *   Static Methods   *
+     * Static Methods *
      **********************/
 
     /*
@@ -58,15 +57,15 @@ public class Router
     private DistanceTable distanceTable;
     private TreeMap<String, Node> forwardingTable;
 
-    private Timer           timer;
-    private Node            thisRouter;
-    private DatagramSocket  socket;
-    private boolean         poisonedReverse;
-    private long            updateInterval = 10000;
-    private boolean         logger = true;
+    private Timer timer;
+    private Node thisRouter;
+    private DatagramSocket socket;
+    private boolean poisonedReverse;
+    private long updateInterval = 10000;
+    private boolean logger = true;
 
     /**********************
-     *      Threads       *
+     * Threads *
      **********************/
 
     /*
@@ -78,18 +77,42 @@ public class Router
 
         public void run() {
             try {
-                while(true)
-                {
-                    BufferedReader inFromUser = new BufferedReader(
-                      new InputStreamReader(System.in)
-                    );
+                while (true) {
+                    BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
                     String sentence = inFromUser.readLine();
+                    String[] chunks = sentence.split(" ");
 
-                    synchronized(distanceTable) {
-                      broadcast(sentence);
+                    switch (chunks[0]) {
+                    case "PRINT":
+                        System.out.println("\n\033[0;32mDistance Vector:\033[0m");
+                        System.out.println("\t" + distanceTable.get(thisRouter).toString());
+                        System.out.println("\n\033[0;33mDistance Vectors Table on this router:\033[0m");
+                        System.out.println(distanceTable);
+                        break;
+                    case "MSG":
+                        synchronized (distanceTable) {
+                            send(chunks[1], chunks[2], chunks[3]);
+                        }
+                        break;
+                    case "CHANGE":
+
+                        distanceTable.updateSelf(
+                            "/" + chunks[1], Integer.parseInt(chunks[2]), 
+                            Integer.parseInt(chunks[3])
+                        );
+
+                        DistanceVector dv = distanceTable.get(thisRouter);
+                        String message = "dv:" + thisRouter.toString() + dv.encode();
+                        send(InetAddress.getByName(chunks[1]), Integer.parseInt(chunks[2]), message);
+                        break;
+                    default:
+                        break;
                     }
+
+                    System.out.println();
+
                 }
-            } catch (Exception e)  {
+            } catch (Exception e) {
                 alert(e);
             }
         }
@@ -104,32 +127,39 @@ public class Router
 
         public void run() {
             try {
-                log(
-                    "\uD83C\uDF0D Listening on port " + thisRouter.port
-                );
+                log("\uD83C\uDF0D Listening on port " + thisRouter.port);
 
-                byte[] receiveData = new byte[1024];
 
-                while(true)
-                {
-                    DatagramPacket receivePacket = new DatagramPacket(
-                        receiveData,
-                        receiveData.length
-                    );
+
+                while (true) {
+                    byte[] receiveData = new byte[1024];
+                    DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
                     socket.receive(receivePacket);
                     String data = new String(receivePacket.getData());
-                    log("⇅ RECEIVED DATA");
-                    log(data);
 
-                    synchronized(distanceTable) {
-                      // TODO(@mestiasz) Update distance table
-                      distanceTable.update(data);
-                      forwardingTable = distanceTable.calculate(thisRouter);
-                      log("⟳ Updated distance table");
-                      log(distanceTable.toString());
-                      log("⟳ Updated forwarding table");
-                      log(forwardingTable.toString());
+
+                    switch (data.substring(0, 3)) {
+                        case "dv:":
+                            synchronized (distanceTable) {
+                                // TODO(@mestiasz) Update distance table
+                                distanceTable.update(data.substring(3));
+
+
+                                // forwardingTable = distanceTable.calculate(thisRouter);
+                                log("⟳ Updated distance table");
+                                log(distanceTable.toString());
+                                log("⟳ Updated forwarding table");
+                                // log(forwardingTable.toString());
+                            }
+                            break;
+                        default:
+                            System.out.println("⇅ RECEIVED DATA");
+                            System.out.println(data);
+                            break;
                     }
+
+
+                    
                 }
             } catch (Exception e) {
                 alert(e);
@@ -141,27 +171,28 @@ public class Router
      * Thread that runs periodically and sends updates to the node's neighbors
      */
     public class TimedUpdateThread extends TimerTask {
-      @Override
-      public void run() {
-        log("➠ Broadcasting periodical updates... ");
-        synchronized(distanceTable) {
-          // TODO(@mestiasz) Send out distance table
-          DistanceVector dv = distanceTable.get(thisRouter);
-          // log("Broadcast " + dv.encode() + "END" + thisRouter.toString());
-          broadcast(thisRouter.toString() + dv.encode());
+        @Override
+        public void run() {
+            log("➠ Broadcasting periodical updates... ");
+            synchronized (distanceTable) {
+                // TODO(@mestiasz) Send out distance table
+                DistanceVector dv = distanceTable.get(thisRouter);
+                // log("Broadcast " + dv.encode() + "END" + thisRouter.toString());
+                broadcast("dv:" + thisRouter.toString() + dv.encode());
+            }
         }
-      }
     }
 
     /**********************
-     *    Main Methods    *
+     * Main Methods *
      **********************/
 
     /*
-     * Constructor - Creates a router, initializes it and sets up routines
-     * for reading input, sending periodical updates and listening for messages
+     * Constructor - Creates a router, initializes it and sets up routines for
+     * reading input, sending periodical updates and listening for messages
      *
      * @param poisonedReverse whether to use poisoned reverse or not
+     * 
      * @param configFile router's neighbors definition (path to a file)
      */
     public Router(boolean poisonedReverse, String configFile, boolean logger) {
@@ -180,16 +211,12 @@ public class Router
         inputLoop.start();
 
         Timer timer = new Timer();
-        timer.scheduleAtFixedRate(
-            new TimedUpdateThread(),
-            updateInterval,
-            updateInterval
-        );
+        timer.scheduleAtFixedRate(new TimedUpdateThread(), updateInterval, updateInterval);
     }
 
     /*
-     * initRouter - Configures and sets up the current router based on
-     * a given configuration file. Also initializes the default distance table.
+     * initRouter - Configures and sets up the current router based on a given
+     * configuration file. Also initializes the default distance table.
      *
      * @param configFile path to the configuration file
      */
@@ -207,17 +234,17 @@ public class Router
             this.thisRouter = new Node(thisIp, thisPort, 0);
 
             // Initialize distance table and neighbor list
-            this.distanceTable = new DistanceTable();
+            this.distanceTable = new DistanceTable(this);
 
             // Read neighbors from file and store them in the initial dv
             DistanceVector dv = new DistanceVector();
             // Add self as node in DV
             dv.put(thisIp + ":" + thisPort, 0);
 
-            while(input.hasNext()) {
-                InetAddress ip  = InetAddress.getByName(input.next());
-                int port        = input.nextInt();
-                int cost        = input.nextInt();
+            while (input.hasNext()) {
+                InetAddress ip = InetAddress.getByName(input.next());
+                int port = input.nextInt();
+                int cost = input.nextInt();
 
                 Node neighbor = new Node(ip, port, cost);
 
@@ -228,9 +255,7 @@ public class Router
                 // Since the rows of the table are neighbors
                 this.distanceTable.put(neighbor, new DistanceVector());
 
-                System.out.println(
-                  "✓ Added node: IP (" + ip + ") , Port (" + port + "), Cost " + cost
-                );
+                System.out.println("✓ Added node: IP (" + ip + ") , Port (" + port + "), Cost " + cost);
             }
 
             // After adding all the neighbors to the dv, adds it to the distance table
@@ -254,29 +279,51 @@ public class Router
     }
 
     public void broadcast(String message) {
-      try {
-        // Get all neighboring nodes from the distance table
-        Iterator it = this.distanceTable.entrySet().iterator();
+        try {
+            // Get all neighboring nodes from the distance table
+            Iterator it = this.distanceTable.entrySet().iterator();
 
-        // Broadcast the message to all neighboring nodes
-        while (it.hasNext()) {
-          Node neighbor = (Node)((Map.Entry) it.next()).getKey();
-          // Don't broadcast to self
-          if (neighbor == thisRouter) continue;
-          DatagramPacket sendPacket = new DatagramPacket(
-              message.getBytes(),
-              message.getBytes().length,
-              neighbor.ip,
-              neighbor.port
-          );
-          socket.send(sendPacket);
+            // Broadcast the message to all neighboring nodes
+            while (it.hasNext()) {
+                Node neighbor = (Node) ((Map.Entry) it.next()).getKey();
+                // Don't broadcast to self
+                if (neighbor == thisRouter)
+                    continue;
+                send(neighbor.ip, neighbor.port, message);
+            }
+        } catch (Exception e) {
+            alert(e);
         }
-      } catch (Exception e) {
-        alert(e);
-      }
     }
 
-    public void log (String str) {
+    public void send(String ip, String port, String message) {
+        try {
+            send(InetAddress.getByName(ip), Integer.parseInt(port), message);
+        } catch (Exception e) {
+            alert(e);
+        }
+    }
+
+    public void send(InetAddress ip, int port, String message) {
+        try {
+            DatagramPacket sendPacket = new DatagramPacket(
+                message.getBytes(), 
+                message.getBytes().length, 
+                ip,
+                port
+            );
+
+            socket.send(sendPacket);
+        } catch (Exception e) {
+            alert(e);
+        }
+    }
+
+    public Node node () {
+        return thisRouter;
+    }
+
+    public void log(String str) {
         if (this.logger) {
             System.out.println(str);
         }

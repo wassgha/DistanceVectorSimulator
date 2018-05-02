@@ -146,7 +146,6 @@ public class Router {
                     switch (data.substring(0, 3)) {
                         case "dv:":
                             synchronized (distanceTable) {
-                                // TODO(@mestiasz) Update distance table
                                 distanceTable.update(data.substring(3));
 
 
@@ -180,7 +179,6 @@ public class Router {
         public void run() {
             log("➠ Broadcasting periodical updates... ");
             synchronized (distanceTable) {
-                // TODO(@mestiasz) Send out distance table
                 DistanceVector dv = distanceTable.get(thisRouter);
                 // log("Broadcast " + dv.encode() + "END" + thisRouter.toString());
                 broadcast("dv:" + thisRouter.toString() + dv.encode());
@@ -240,6 +238,7 @@ public class Router {
 
             // Initialize distance table and neighbor list
             this.distanceTable = new DistanceTable(this);
+            this.forwardingTable = new TreeMap<String, Node>();
 
             // Read neighbors from file and store them in the initial dv
             DistanceVector dv = new DistanceVector();
@@ -259,6 +258,7 @@ public class Router {
                 // Also add node to distance table
                 // Since the rows of the table are neighbors
                 this.distanceTable.put(neighbor, new DistanceVector());
+                this.forwardingTable.put(ip.toString() + ":" + port, neighbor);
 
                 System.out.println("✓ Added node: IP (" + ip + ") , Port (" + port + "), Cost " + cost);
             }

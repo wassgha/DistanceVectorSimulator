@@ -73,7 +73,7 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
         
       }
       this.put(targetNode, newDV);
-      this.recalculate();
+      // this.recalculate();
     }
 
     public void updateSelf(String destIp, int destPort, int cost) {
@@ -81,40 +81,37 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
       dv.put(destIp + ":" + destPort, cost);
     }
 
-    public void recalculate () {
+    public TreeMap<String, Node> calculate () {
       // calculate min and update
       DistanceVector self = this.get(router.node());
       DistanceVector newDv = new DistanceVector();
       Set<String> keys = self.keySet();
       String address = router.node().ip + ":" + router.node().port;
-      System.out.println("\n\n\n");
+      TreeMap<String, Node> forwardingTable = new TreeMap<String, Node>();
 
       for (String i: keys) {  
-        System.out.println("KEY:\t" + i);
   
-        int min = Integer.MAX_VALUE;
+        int min = self.get(i);
+        Node nextHopNode = router.forwardingTable() != null && router.forwardingTable().containsKey(i) 
+                          ? router.forwardingTable().get(i) 
+                          : getNode(i);
+
         for (String j: keys) {
-          String[] chunks = j.split(":");
-          int c = this.get(getNode(chunks[0], chunks[1])).get(address);
-          int d = this.get(getNode(chunks[0], chunks[1])).get(i);
+          int c = this.get(getNode(j)).get(address);
+          int d = this.get(getNode(j)).get(i);
 
-          min = c + d < min && (c + d) >= 0 ? (c + d) : min;
-
-          // System.out.println("HERE IT STARTS----");
-          // System.out.println("C(x, j):\t" + c);
-          // System.out.println("Dj(i):\t\t" + d);
-          // System.out.println("Cost:\t\t" + cost);
-          // System.out.println("NOO, HERE IT ENDS----");
+          if (c + d < min && (c + d) >= 0) {
+            min = c + d;
+            nextHopNode = getNode(j);
+          }
         }
 
         newDv.put(i, min);
-        // System.out.println("MIN:\t" + min + "\n");
+        forwardingTable.put(i, nextHopNode);
       }
       
       this.put(router.node(), newDv);
-      // System.out.println("\n\n\n");
-      // System.out.println(this);
-      // System.out.println("\n\n\n");
+      return forwardingTable;
     }
 
     /*
@@ -164,6 +161,11 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
         if (tmp.ip.toString().equals(ip) && ("" + tmp.port).equals(port)) return tmp;
       }
       return null;
+    }
+
+    public Node getNode(String address) {
+     String[] chunks = address.split(":");
+     return getNode(chunks[0], chunks[1]);
     }
 
     /*

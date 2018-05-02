@@ -88,6 +88,11 @@ public class Router {
                         System.out.println("\t" + distanceTable.get(thisRouter).toString());
                         System.out.println("\n\033[0;33mDistance Vectors Table on this router:\033[0m");
                         System.out.println(distanceTable);
+
+                        if (forwardingTable != null) {
+                            System.out.println("\n\033[0;33mForwarding Table on this router:\033[0m");
+                            System.out.println(forwardingTable.toString());
+                        }
                         break;
                     case "MSG":
                         synchronized (distanceTable) {
@@ -145,11 +150,11 @@ public class Router {
                                 distanceTable.update(data.substring(3));
 
 
-                                // forwardingTable = distanceTable.calculate(thisRouter);
+                                forwardingTable = distanceTable.calculate();
                                 log("⟳ Updated distance table");
                                 log(distanceTable.toString());
                                 log("⟳ Updated forwarding table");
-                                // log(forwardingTable.toString());
+                                log(forwardingTable.toString());
                             }
                             break;
                         default:
@@ -321,6 +326,10 @@ public class Router {
 
     public Node node () {
         return thisRouter;
+    }
+
+    public TreeMap<String, Node> forwardingTable () {
+        return forwardingTable;
     }
 
     public void log(String str) {

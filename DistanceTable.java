@@ -73,46 +73,12 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
         
       }
       this.put(targetNode, newDV);
-      // this.recalculate();
     }
 
-    public void updateSelf(String destIp, int destPort, int cost) {
-      DistanceVector dv = this.get(router.node());
-      dv.put(destIp + ":" + destPort, cost);
+    public void change(String ip, int port, int cost) {
+      getNode(ip + ":" + port).cost = cost;
     }
 
-    public TreeMap<String, Node> calculate () {
-      // calculate min and update
-      DistanceVector self = this.get(router.node());
-      DistanceVector newDv = new DistanceVector();
-      Set<String> keys = self.keySet();
-      String address = router.node().ip + ":" + router.node().port;
-      TreeMap<String, Node> forwardingTable = new TreeMap<String, Node>();
-
-      for (String i: keys) {  
-  
-        int min = self.get(i);
-        Node nextHopNode = router.forwardingTable() != null && router.forwardingTable().containsKey(i) 
-                          ? router.forwardingTable().get(i) 
-                          : getNode(i);
-
-        for (String j: keys) {
-          int c = this.get(getNode(j)).get(address);
-          int d = this.get(getNode(j)).get(i);
-
-          if (c + d < min && (c + d) >= 0) {
-            min = c + d;
-            nextHopNode = getNode(j);
-          }
-        }
-
-        newDv.put(i, min);
-        forwardingTable.put(i, nextHopNode);
-      }
-      
-      this.put(router.node(), newDv);
-      return forwardingTable;
-    }
 
     /*
      * Updates distance vector for given node
@@ -121,6 +87,7 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
      * @return new forwarding table for this node
      */
     public TreeMap<String, Node> calculate(Node router) {
+
       DistanceVector dv = new DistanceVector();
       dv.put(router.toString(), 0);
       TreeMap<String, Node> forwardingTable = new TreeMap<String, Node>();

@@ -101,14 +101,15 @@ public class Router {
                         break;
                     case "CHANGE":
 
-                        distanceTable.updateSelf(
+                        distanceTable.change(
                             "/" + chunks[1], Integer.parseInt(chunks[2]), 
                             Integer.parseInt(chunks[3])
                         );
 
                         DistanceVector dv = distanceTable.get(thisRouter);
-                        String message = "dv:" + thisRouter.toString() + dv.encode();
+                        String message = "wc:" + thisRouter.toString() + " " + chunks[3];
                         send(InetAddress.getByName(chunks[1]), Integer.parseInt(chunks[2]), message);
+                        broadcast("dv:" + thisRouter.toString() + dv.encode());
                         break;
                     default:
                         break;
@@ -148,8 +149,7 @@ public class Router {
                             synchronized (distanceTable) {
                                 distanceTable.update(data.substring(3));
 
-
-                                forwardingTable = distanceTable.calculate();
+                                forwardingTable = distanceTable.calculate(thisRouter);
                                 log("⟳ Updated distance table");
                                 log(distanceTable.toString());
                                 log("⟳ Updated forwarding table");
@@ -163,6 +163,24 @@ public class Router {
                             System.out.println("Address -> " + address);
                             System.out.println(data);
                             sendMessage(chunks[0], chunks[1], data.substring(data.indexOf('\n') + 1));
+                            break;
+                        case "wc:":
+                            synchronized (distanceTable) {
+                                String[] tmp = data.substring(3).trim().split(" ");
+                                String[] details = tmp[0].split(":");
+
+                                System.out.println(tmp[0] + " " + tmp[1]);
+
+                                distanceTable.change(
+                                    details[0], Integer.parseInt(details[1]), 
+                                    Integer.parseInt(tmp[1])
+                                );
+
+                                DistanceVector dv = distanceTable.get(thisRouter);
+                                broadcast("dv:" + thisRouter.toString() + dv.encode());
+
+                                System.out.println(distanceTable);
+                            }
                             break;
                         default:
                             System.out.println("⇅ RECEIVED DATA");

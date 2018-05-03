@@ -96,7 +96,7 @@ public class Router {
                         break;
                     case "MSG":
                         synchronized (distanceTable) {
-                            send(chunks[1], chunks[2], chunks[3]);
+                            sendMessage(chunks[1], chunks[2], chunks[3]);
                         }
                         break;
                     case "CHANGE":
@@ -155,6 +155,14 @@ public class Router {
                                 log("⟳ Updated forwarding table");
                                 log(forwardingTable.toString());
                             }
+                            break;
+                        case "fd:":
+                            String address = data.substring(3, data.indexOf('\n'));
+                            String[] chunks = address.split(":");
+                            System.out.println("⇅ RECEIVED DATA");
+                            System.out.println("Address -> " + address);
+                            System.out.println(data);
+                            sendMessage(chunks[0], chunks[1], data.substring(data.indexOf('\n') + 1));
                             break;
                         default:
                             System.out.println("⇅ RECEIVED DATA");
@@ -301,9 +309,16 @@ public class Router {
         }
     }
 
-    public void send(String ip, String port, String message) {
+    public void sendMessage (String ip, String port, String message) {
         try {
-            send(InetAddress.getByName(ip), Integer.parseInt(port), message);
+            Node nextHop = this.forwardingTable.get("/" + ip + ":" + port);
+            System.out.println("NextHop -> " + nextHop.ip.toString() + "\tIp -> " + ip);
+
+            if (!nextHop.ip.toString().equals("/" + ip) || nextHop.port != Integer.parseInt(port)) 
+                message = "fd:" + ip + ":" + port + '\n' + message + " " + nextHop.ip.getHostAddress() + ":" + nextHop.port;
+
+            System.out.println("Sending: " + message);
+            send(nextHop.ip, nextHop.port, message);
         } catch (Exception e) {
             alert(e);
         }

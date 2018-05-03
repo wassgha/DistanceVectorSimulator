@@ -314,17 +314,50 @@ public class Router {
             // Get all neighboring nodes from the distance table
             Iterator it = this.distanceTable.entrySet().iterator();
 
+            DistanceVector dv = null;
+            if (message.substring(0, 3).equals("dv:")) {
+                dv = distanceTable.get(thisRouter);
+            }
+
             // Broadcast the message to all neighboring nodes
             while (it.hasNext()) {
                 Node neighbor = (Node) ((Map.Entry) it.next()).getKey();
                 // Don't broadcast to self
                 if (neighbor == thisRouter)
                     continue;
+
+                // poison reverse
+                if (dv != null) {
+                   message = poison(neighbor, dv);
+                }
+
                 send(neighbor.ip, neighbor.port, message);
             }
         } catch (Exception e) {
             alert(e);
         }
+    }
+
+    public String poison (Node neighbor, DistanceVector dv) {
+        DistanceVector poisonedDv = new DistanceVector();
+        Set<String> keys = dv.keySet();
+        String message = "";
+
+        for (String key: keys) {  
+
+            if ( 
+                forwardingTable.containsKey(key) &&
+                forwardingTable.get(key).compareTo(neighbor) == 0 && 
+                !key.equals(forwardingTable.get(key).address())
+            ) {
+                poisonedDv.put(key, Integer.MAX_VALUE);
+            } else {
+                poisonedDv.put(key, dv.get(key));
+            }
+        }
+        message = "dv:" + thisRouter.toString() + poisonedDv.encode();
+
+        return message;
     }
 
     public void sendMessage (String ip, String port, String message) {

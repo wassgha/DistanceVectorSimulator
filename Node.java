@@ -21,6 +21,10 @@ public class Node implements Comparable<Node> {
       return "" + this.ip + ":" + this.port;
     }
 
+    public String address () {
+      return ip.toString() + ":" + port;
+    }
+
     public int compareTo(Node o) {
       if (this.ip.equals(o.ip)) {
         return this.port - o.port;

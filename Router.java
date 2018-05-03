@@ -327,7 +327,7 @@ public class Router {
                     continue;
 
                 // poison reverse
-                if (dv != null) {
+                if (dv != null && this.poisonedReverse) {
                    message = poison(neighbor, dv);
                 }
 

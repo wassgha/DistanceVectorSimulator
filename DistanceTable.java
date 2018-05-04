@@ -60,12 +60,13 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
       // Identifies sender of data
       String[] firstLine = lines[0].split(":");
       Node targetNode = getNode(firstLine[0], firstLine[1]);
+      boolean oldNeighbor = targetNode == null;
 
       // System.out.println();
-      if (targetNode == null) {
+      if (oldNeighbor) {
         targetNode = new Node(
           InetAddress.getByName(firstLine[0].substring(1)),
-          Integer.parseInt(firstLine[1]), 
+          Integer.parseInt(firstLine[1]),
           router.neighbors.get(firstLine[0] + ":" + firstLine[1])
         );
       }
@@ -81,6 +82,7 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
         String entry = line[0];
         Integer cost = Integer.parseInt(line[1].trim());
 
+        if (!this.get(router.node()).containsKey(entry) && router.neighbors.containsKey(entry) && !oldNeighbor) continue;
         newDV.put(entry, cost);
 
       }
@@ -150,6 +152,7 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
     }
 
     public void removeColumn (String key) {
+      System.out.println("Removing column " + key);
       Set<Node> nodes = this.keySet();
       DistanceVector dv = null;
 

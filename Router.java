@@ -241,8 +241,9 @@ public class Router {
                     Node key = (Node) i.next();
                     // if (tmp == null) continue;
 
-                    if (!key.equals(thisRouter.address())) key.lastUpdated++;
-                    if (key.lastUpdated == 3) {
+                    if (!key.address().equals(thisRouter.address())) key.lastUpdated++;
+                    System.out.println("LAST UPDATED " + key.address() + " " + key.lastUpdated);
+                    if (key.lastUpdated >= 3) {
                         keysToBeRemoved.add(key);
                     }
                 }

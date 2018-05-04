@@ -441,6 +441,12 @@ public class Router {
     public void sendMessage (String ip, String port, String message) {
         try {
             Node nextHop = this.forwardingTable.get("/" + ip + ":" + port);
+
+            if (nextHop == null) {
+                System.out.println("No entry in forwarding table -> Dropping");
+                return;
+            }
+
             log("NextHop -> " + nextHop.ip.toString() + "\tIp -> " + ip);
 
             if (!nextHop.ip.toString().equals("/" + ip)

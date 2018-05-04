@@ -1,4 +1,5 @@
 import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.util.*;
 
 /*
@@ -52,17 +53,26 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
      *
      * @param data string encoded distance vector received from socket
      */
-    public void update(String data) {
+    public void update(String data) throws Exception {
       String[] lines = data.split("\n");
       if (lines.length == 0) return;
 
       // Identifies sender of data
       String[] firstLine = lines[0].split(":");
       Node targetNode = getNode(firstLine[0], firstLine[1]);
-      // if (targetNode == null) targetNode = new Node()
 
-      DistanceVector dv = this.get(targetNode);
-      if (dv == null) return;
+      // System.out.println();
+      if (targetNode == null) {
+        targetNode = new Node(
+          InetAddress.getByName(firstLine[0].substring(1)),
+          Integer.parseInt(firstLine[1]), 
+          router.neighbors.get(firstLine[0] + ":" + firstLine[1])
+        );
+      }
+      else {
+        DistanceVector dv = this.get(targetNode);
+        if (dv == null) return;
+      }
 
       // Adds each entry in encoded string to DV object
       DistanceVector newDV = new DistanceVector();

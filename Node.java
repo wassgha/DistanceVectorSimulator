@@ -9,12 +9,14 @@ public class Node implements Comparable<Node> {
     public int          port;
     public int          cost;
     public long         lastUpdated;
+    public boolean      offline;
 
     Node(InetAddress ip, int port, int cost) {
         this.ip           = ip;
         this.port         = port;
         this.cost         = cost;
         this.lastUpdated  = 0;
+        this.offline      = false;
     }
 
     public String toString() {

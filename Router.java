@@ -51,6 +51,7 @@ public class Router {
 
     private DistanceTable distanceTable;
     private ForwardingTable forwardingTable;
+    public TreeMap<String, Integer> neighbors;
 
     private Timer timer;
     private Node thisRouter;
@@ -151,6 +152,7 @@ public class Router {
                         case "dv:":
                             synchronized (distanceTable) {
                                 distanceTable.update(data.substring(3));
+                                log("Received:\n" + data + "\n");
 
                                 forwardingTable = distanceTable.calculate(thisRouter);
                                 log("⟳ Updated distance table");
@@ -317,6 +319,7 @@ public class Router {
             // Initialize distance table and neighbor list
             this.distanceTable = new DistanceTable(this);
             this.forwardingTable = new ForwardingTable();
+            this.neighbors = new TreeMap<String, Integer>();
 
             // Read neighbors from file and store them in the initial dv
             DistanceVector dv = new DistanceVector();
@@ -329,6 +332,7 @@ public class Router {
                 int cost = input.nextInt();
 
                 Node neighbor = new Node(ip, port, cost);
+                neighbors.put(neighbor.address(), cost);
 
                 // Add the neighbor to the distance vector (as a column on the
                 // current router's row of the distance table)
@@ -477,11 +481,11 @@ public class Router {
     }
 
     public void log(Object str) {
-        //System.out.println(str.toString());
+        System.out.println(str.toString());
     }
 
     public void log(String str) {
-        //System.out.println(str);
+        System.out.println(str);
     }
 
     public void log() {

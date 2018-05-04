@@ -231,26 +231,25 @@ public class Router {
             synchronized (distanceTable) {
                 DistanceVector dv = distanceTable.get(thisRouter);
 
-                Set keys = dv.keySet();
+                Set keys = distanceTable.keySet();
                 Node tmp = null;
                 Iterator i = keys.iterator();
-                ArrayList<String> keysToBeRemoved = new ArrayList<String>();
+                ArrayList<Node> keysToBeRemoved = new ArrayList<Node>();
 
 
                 while (i.hasNext()) {
-                    String key = (String) i.next();
-                    tmp = distanceTable.getNode(key);
+                    Node key = (Node) i.next();
                     // if (tmp == null) continue;
 
-                    if (!key.equals(thisRouter.address())) tmp.lastUpdated++;
-                    if (tmp.lastUpdated == 3) {
-                        distanceTable.remove(tmp);
+                    if (!key.equals(thisRouter.address())) key.lastUpdated++;
+                    if (key.lastUpdated == 3) {
                         keysToBeRemoved.add(key);
                     }
                 }
 
                 for (int index = 0; index < keysToBeRemoved.size(); index++) {
-                    distanceTable.removeColumn(keysToBeRemoved.get(index));
+                    distanceTable.remove(keysToBeRemoved.get(index));
+                    distanceTable.removeColumn(keysToBeRemoved.get(index).address());
                 }
 
                 forwardingTable = distanceTable.calculate(thisRouter);

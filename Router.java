@@ -236,8 +236,6 @@ public class Router {
                 Iterator i = keys.iterator();
                 ArrayList<String> keysToBeRemoved = new ArrayList<String>();
 
-                System.out.println("BEFORE: \n" + distanceTable);
-
 
                 while (i.hasNext()) {
                     String key = (String) i.next();
@@ -255,7 +253,6 @@ public class Router {
                     distanceTable.removeColumn(keysToBeRemoved.get(index));
                 }
 
-                System.out.println("\n AFTER: \n" + distanceTable + "\n");
                 forwardingTable = distanceTable.calculate(thisRouter);
 
                 broadcast("dv:" + thisRouter.address() + dv.encode());

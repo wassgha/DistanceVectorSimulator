@@ -20,12 +20,7 @@ public class Router {
         boolean poisonedReverse = args[0].equals("-reverse");
         String configFile = args[0].equals("-reverse") ? args[1] : args[0];
 
-        boolean logger = true;
-        if ((args.length == 2 && !args[0].equals("-reverse")) || args.length > 2) {
-            logger = args[0].equals("-reverse") ? args[2].equals("true") : args[1].equals("true");
-        }
-
-        Router router = new Router(poisonedReverse, configFile, logger);
+        Router router = new Router(poisonedReverse, configFile);
     }
 
     /*
@@ -34,7 +29,7 @@ public class Router {
      * @param e exception to print out
      */
     public static void alert(Exception e) {
-        System.out.print("✖ An error occured: ");
+        System.out.println("✖ An error occured: ");
         e.printStackTrace();
         System.exit(0);
     }
@@ -45,8 +40,8 @@ public class Router {
      * @param e error message to print out
      */
     public static void alert(String e) {
-        System.out.print("✖ An error occured: ");
-        System.out.print(e);
+        System.out.println("✖ An error occured: ");
+        System.out.println(e);
         System.exit(0);
     }
 
@@ -55,14 +50,13 @@ public class Router {
      **********************/
 
     private DistanceTable distanceTable;
-    private TreeMap<String, Node> forwardingTable;
+    private ForwardingTable forwardingTable;
 
     private Timer timer;
     private Node thisRouter;
     private DatagramSocket socket;
     private boolean poisonedReverse;
     private long updateInterval = 10000;
-    private boolean logger = true;
 
     /**********************
      * Threads *
@@ -81,41 +75,52 @@ public class Router {
                     BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
                     String sentence = inFromUser.readLine();
                     String[] chunks = sentence.split(" ");
+                    String message;
 
                     switch (chunks[0]) {
                     case "PRINT":
-                        System.out.println("\n\033[0;32mDistance Vector:\033[0m");
-                        System.out.println("\t" + distanceTable.get(thisRouter).toString());
-                        System.out.println("\n\033[0;33mDistance Vectors Table on this router:\033[0m");
-                        System.out.println(distanceTable);
+                        log("\n\033[0;32mDistance Vector:\033[0m");
+                        log("\t" + distanceTable.get(thisRouter).toString());
+                        log("\n\033[0;33mDistance Vectors Table on this router:\033[0m");
+                        log(distanceTable);
 
                         if (forwardingTable != null) {
-                            System.out.println("\n\033[0;33mForwarding Table on this router:\033[0m");
-                            System.out.println(forwardingTable.toString());
+                            log("\n\033[0;33mForwarding Table on this router:\033[0m");
+                            log(forwardingTable.toString());
                         }
                         break;
                     case "MSG":
-                        synchronized (distanceTable) {
-                            sendMessage(chunks[1], chunks[2], chunks[3]);
-                        }
+                        if (chunks.length != 4)
+                          alert("Usage: MSG <dst-ip> <dst-port> <msg>");
+
+                        sendMessage(chunks[1], chunks[2], chunks[3]);
                         break;
                     case "CHANGE":
+                        if (chunks.length != 4)
+                          alert("Usage: CHANGE <dst-ip> <dst-port> <new-weight>");
 
                         distanceTable.change(
-                            "/" + chunks[1], Integer.parseInt(chunks[2]), 
+                            "/" + chunks[1], Integer.parseInt(chunks[2]),
                             Integer.parseInt(chunks[3])
                         );
 
                         DistanceVector dv = distanceTable.get(thisRouter);
-                        String message = "wc:" + thisRouter.toString() + " " + chunks[3];
+                        message = "wc:" + thisRouter.address() + " " + chunks[3];
                         send(InetAddress.getByName(chunks[1]), Integer.parseInt(chunks[2]), message);
-                        broadcast("dv:" + thisRouter.toString() + dv.encode());
+                        broadcast("dv:" + thisRouter.address() + dv.encode());
+                        break;
+                    case "BROADCAST":
+                        if (chunks.length != 2)
+                          alert("Usage: BROADCAST <msg>");
+
+                        message = "bc: " + chunks[1] + " " + thisRouter.address();
+                        broadcast(message, true, thisRouter.address(), thisRouter.address());
                         break;
                     default:
                         break;
                     }
 
-                    System.out.println();
+                    log();
 
                 }
             } catch (Exception e) {
@@ -134,8 +139,6 @@ public class Router {
         public void run() {
             try {
                 log("\uD83C\uDF0D Listening on port " + thisRouter.port);
-
-
 
                 while (true) {
                     byte[] receiveData = new byte[1024];
@@ -159,37 +162,56 @@ public class Router {
                         case "fd:":
                             String address = data.substring(3, data.indexOf('\n'));
                             String[] chunks = address.split(":");
-                            System.out.println("⇅ RECEIVED DATA");
-                            System.out.println("Address -> " + address);
-                            System.out.println(data);
-                            sendMessage(chunks[0], chunks[1], data.substring(data.indexOf('\n') + 1));
+                            log("⇅ RECEIVED DATA");
+                            log("Address -> " + address);
+                            log(data);
+                            sendMessage(
+                                chunks[0],
+                                chunks[1],
+                                data.substring(data.indexOf('\n') + 1)
+                            );
                             break;
                         case "wc:":
                             synchronized (distanceTable) {
                                 String[] tmp = data.substring(3).trim().split(" ");
                                 String[] details = tmp[0].split(":");
 
-                                System.out.println(tmp[0] + " " + tmp[1]);
+                                log(tmp[0] + " " + tmp[1]);
 
                                 distanceTable.change(
-                                    details[0], Integer.parseInt(details[1]), 
+                                    details[0], Integer.parseInt(details[1]),
                                     Integer.parseInt(tmp[1])
                                 );
 
                                 DistanceVector dv = distanceTable.get(thisRouter);
-                                broadcast("dv:" + thisRouter.toString() + dv.encode());
+                                broadcast("dv:" + thisRouter.address() + dv.encode());
 
-                                System.out.println(distanceTable);
+                                log(distanceTable);
                             }
                             break;
+                          case "bc:":
+                            synchronized (distanceTable) {
+                              String[] bcDetails = data.substring(3).trim().split(" ");
+                              String msg = bcDetails[0].trim();
+                              String sourceAddress = bcDetails[1].trim();
+                              String lastAddress = bcDetails[bcDetails.length - 1].trim();
+                              log("⇅ RECEIVED BROADCAST : " + data.substring(3).trim());
+                              broadcast(
+                                  data.trim() + " " + thisRouter.address(),
+                                  true,
+                                  lastAddress,
+                                  sourceAddress
+                              );
+                              break;
+                            }
                         default:
-                            System.out.println("⇅ RECEIVED DATA");
-                            System.out.println(data);
+                            log("⇅ RECEIVED DATA");
+                            log(data);
                             break;
                     }
 
 
-                    
+
                 }
             } catch (Exception e) {
                 alert(e);
@@ -207,7 +229,7 @@ public class Router {
             synchronized (distanceTable) {
                 DistanceVector dv = distanceTable.get(thisRouter);
                 // log("Broadcast " + dv.encode() + "END" + thisRouter.toString());
-                broadcast("dv:" + thisRouter.toString() + dv.encode());
+                broadcast("dv:" + thisRouter.address() + dv.encode());
             }
         }
     }
@@ -221,17 +243,16 @@ public class Router {
      * reading input, sending periodical updates and listening for messages
      *
      * @param poisonedReverse whether to use poisoned reverse or not
-     * 
+     *
      * @param configFile router's neighbors definition (path to a file)
      */
-    public Router(boolean poisonedReverse, String configFile, boolean logger) {
+    public Router(boolean poisonedReverse, String configFile) {
         this.poisonedReverse = poisonedReverse;
-        this.logger = logger;
 
         initRouter(configFile);
 
-        System.out.println("⚐ Initial Distance Table");
-        System.out.println(this.distanceTable.toString());
+        log("⚐ Initial Distance Table");
+        log(this.distanceTable.toString());
 
         ListenerThread listener = new ListenerThread();
         listener.start();
@@ -240,7 +261,11 @@ public class Router {
         inputLoop.start();
 
         Timer timer = new Timer();
-        timer.scheduleAtFixedRate(new TimedUpdateThread(), updateInterval, updateInterval);
+        timer.scheduleAtFixedRate(
+            new TimedUpdateThread(),
+            updateInterval,
+            updateInterval
+        );
     }
 
     /*
@@ -250,7 +275,7 @@ public class Router {
      * @param configFile path to the configuration file
      */
     public void initRouter(String configFile) {
-        System.out.println("⌛ Reading neighbor nodes...");
+        log("⌛ Reading neighbor nodes...");
 
         // Parse configuration file
         try {
@@ -264,7 +289,7 @@ public class Router {
 
             // Initialize distance table and neighbor list
             this.distanceTable = new DistanceTable(this);
-            this.forwardingTable = new TreeMap<String, Node>();
+            this.forwardingTable = new ForwardingTable();
 
             // Read neighbors from file and store them in the initial dv
             DistanceVector dv = new DistanceVector();
@@ -286,7 +311,7 @@ public class Router {
                 this.distanceTable.put(neighbor, new DistanceVector());
                 this.forwardingTable.put(ip.toString() + ":" + port, neighbor);
 
-                System.out.println("✓ Added node: IP (" + ip + ") , Port (" + port + "), Cost " + cost);
+                log("✓ Added node: IP (" + ip + ") , Port (" + port + "), Cost " + cost);
             }
 
             // After adding all the neighbors to the dv, adds it to the distance table
@@ -297,7 +322,7 @@ public class Router {
             alert(e);
         }
 
-        System.out.println("✓ Finished constructing initial distance table");
+        log("✓ Finished constructing initial distance table");
 
         // Initialize the UDP Connection
         try {
@@ -306,10 +331,14 @@ public class Router {
             alert(e);
         }
 
-        System.out.println("\uD83D\uDCE1 Router deployed!");
+        log("\uD83D\uDCE1 Router deployed!");
     }
 
     public void broadcast(String message) {
+      broadcast(message, false, "", "");
+    }
+
+    public void broadcast(String message, boolean reversePathForward, String lastAddress, String sourceAddress) {
         try {
             // Get all neighboring nodes from the distance table
             Iterator it = this.distanceTable.entrySet().iterator();
@@ -319,11 +348,26 @@ public class Router {
                 dv = distanceTable.get(thisRouter);
             }
 
+            // If reverse path forwarding is on then only broadcast if the
+            // node came on the shortest path from its source
+            if (message.substring(0, 3).equals("bc:") && reversePathForward) {
+              if (this.forwardingTable.containsKey(sourceAddress) &&
+                  !this.forwardingTable.get(sourceAddress).address().equals(lastAddress)) {
+                    log("✖ Broadcast message rejected (reverse path forwarding)");
+                    return;
+              }
+            }
+
             // Broadcast the message to all neighboring nodes
             while (it.hasNext()) {
                 Node neighbor = (Node) ((Map.Entry) it.next()).getKey();
                 // Don't broadcast to self
-                if (neighbor == thisRouter)
+                if (neighbor.address().equals(thisRouter.address()))
+                    continue;
+
+                // Do not broadcast to the node the message came from
+                if (message.substring(0, 3).equals("bc:")
+                    && neighbor.address().equals(lastAddress))
                     continue;
 
                 // poison reverse
@@ -332,6 +376,9 @@ public class Router {
                 }
 
                 send(neighbor.ip, neighbor.port, message);
+
+                if (message.substring(0, 3).equals("bc:"))
+                  log("➠ Broadcast message forwarded to " + neighbor.port);
             }
         } catch (Exception e) {
             alert(e);
@@ -343,11 +390,11 @@ public class Router {
         Set<String> keys = dv.keySet();
         String message = "";
 
-        for (String key: keys) {  
+        for (String key: keys) {
 
-            if ( 
+            if (
                 forwardingTable.containsKey(key) &&
-                forwardingTable.get(key).compareTo(neighbor) == 0 && 
+                forwardingTable.get(key).compareTo(neighbor) == 0 &&
                 !key.equals(forwardingTable.get(key).address())
             ) {
                 poisonedDv.put(key, Integer.MAX_VALUE);
@@ -355,7 +402,7 @@ public class Router {
                 poisonedDv.put(key, dv.get(key));
             }
         }
-        message = "dv:" + thisRouter.toString() + poisonedDv.encode();
+        message = "dv:" + thisRouter.address() + poisonedDv.encode();
 
         return message;
     }
@@ -363,12 +410,16 @@ public class Router {
     public void sendMessage (String ip, String port, String message) {
         try {
             Node nextHop = this.forwardingTable.get("/" + ip + ":" + port);
-            System.out.println("NextHop -> " + nextHop.ip.toString() + "\tIp -> " + ip);
+            log("NextHop -> " + nextHop.ip.toString() + "\tIp -> " + ip);
 
-            if (!nextHop.ip.toString().equals("/" + ip) || nextHop.port != Integer.parseInt(port)) 
-                message = "fd:" + ip + ":" + port + '\n' + message + " " + nextHop.ip.getHostAddress() + ":" + nextHop.port;
+            if (!nextHop.ip.toString().equals("/" + ip)
+                || nextHop.port != Integer.parseInt(port))
+                message = "fd:"
+                            + ip + ":" + port + '\n'
+                            + message + " "
+                            + nextHop.ip.getHostAddress() + ":" + nextHop.port;
 
-            System.out.println("Sending: " + message);
+            log("Sending: " + message);
             send(nextHop.ip, nextHop.port, message);
         } catch (Exception e) {
             alert(e);
@@ -378,8 +429,8 @@ public class Router {
     public void send(InetAddress ip, int port, String message) {
         try {
             DatagramPacket sendPacket = new DatagramPacket(
-                message.getBytes(), 
-                message.getBytes().length, 
+                message.getBytes(),
+                message.getBytes().length,
                 ip,
                 port
             );
@@ -394,13 +445,19 @@ public class Router {
         return thisRouter;
     }
 
-    public TreeMap<String, Node> forwardingTable () {
+    public ForwardingTable forwardingTable () {
         return forwardingTable;
     }
 
+    public void log(Object str) {
+        System.out.println(str.toString());
+    }
+
     public void log(String str) {
-        if (this.logger) {
-            System.out.println(str);
-        }
+        System.out.println(str);
+    }
+
+    public void log() {
+        System.out.println();
     }
 }

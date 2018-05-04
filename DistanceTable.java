@@ -70,7 +70,7 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
         Integer cost = Integer.parseInt(line[1].trim());
 
         newDV.put(entry, cost);
-        
+
       }
       this.put(targetNode, newDV);
     }
@@ -86,11 +86,11 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
      * @param router node whose distance vector to update
      * @return new forwarding table for this node
      */
-    public TreeMap<String, Node> calculate(Node router) {
+    public ForwardingTable calculate(Node router) {
 
       DistanceVector dv = new DistanceVector();
       dv.put(router.toString(), 0);
-      TreeMap<String, Node> forwardingTable = new TreeMap<String, Node>();
+      ForwardingTable forwardingTable = new ForwardingTable();
 
       Iterator it = this.entrySet().iterator();
       while (it.hasNext()) {
@@ -143,10 +143,10 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
       Iterator it = this.entrySet().iterator();
       while (it.hasNext()) {
         Node node = (Node)((Map.Entry) it.next()).getKey();
-        result += node.toString() 
-                    + " (Cost " + node.cost + ")\t|\t" 
-                    + this.get(node) 
-                    + (it.hasNext() ? "\n" : "");
+        result += "\t" + node.toString()
+                       + " (Cost " + node.cost + ")\t|\t"
+                       + this.get(node)
+                       + (it.hasNext() ? "\n" : "");
       }
       return result;
     }

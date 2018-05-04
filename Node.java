@@ -18,7 +18,7 @@ public class Node implements Comparable<Node> {
     }
 
     public String toString() {
-      return "" + this.ip + ":" + this.port;
+      return address();
     }
 
     public String address () {

@@ -14,7 +14,7 @@ public class Node implements Comparable<Node> {
         this.ip           = ip;
         this.port         = port;
         this.cost         = cost;
-        this.lastUpdated  = new Date().getTime();
+        this.lastUpdated  = 0;
     }
 
     public String toString() {

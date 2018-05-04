@@ -59,6 +59,8 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
       // Identifies sender of data
       String[] firstLine = lines[0].split(":");
       Node targetNode = getNode(firstLine[0], firstLine[1]);
+      // if (targetNode == null) targetNode = new Node()
+
       DistanceVector dv = this.get(targetNode);
       if (dv == null) return;
 
@@ -72,6 +74,8 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
         newDV.put(entry, cost);
 
       }
+
+      targetNode.lastUpdated = 0;
       this.put(targetNode, newDV);
     }
 
@@ -133,6 +137,16 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
     public Node getNode(String address) {
      String[] chunks = address.split(":");
      return getNode(chunks[0], chunks[1]);
+    }
+
+    public void removeColumn (String key) {
+      Set<Node> nodes = this.keySet();
+      DistanceVector dv = null;
+
+      for (Node node : nodes) {
+        dv = this.get(node);
+        dv.remove(key);
+      }
     }
 
     /*

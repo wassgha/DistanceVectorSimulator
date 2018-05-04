@@ -79,14 +79,14 @@ public class Router {
 
                     switch (chunks[0]) {
                     case "PRINT":
-                        log("\n\033[0;32mDistance Vector:\033[0m");
-                        log("\t" + distanceTable.get(thisRouter).toString());
-                        log("\n\033[0;33mDistance Vectors Table on this router:\033[0m");
-                        log(distanceTable);
+                        System.out.println("\n\033[0;32mDistance Vector:\033[0m");
+                        System.out.println("\t" + distanceTable.get(thisRouter).toString());
+                        System.out.println("\n\033[0;33mDistance Vectors Table on this router:\033[0m");
+                        System.out.println(distanceTable);
 
                         if (forwardingTable != null) {
-                            log("\n\033[0;33mForwarding Table on this router:\033[0m");
-                            log(forwardingTable.toString());
+                            System.out.println("\n\033[0;33mForwarding Table on this router:\033[0m");
+                            System.out.println(forwardingTable.toString());
                         }
                         break;
                     case "MSG":
@@ -228,7 +228,34 @@ public class Router {
             log("➠ Broadcasting periodical updates... ");
             synchronized (distanceTable) {
                 DistanceVector dv = distanceTable.get(thisRouter);
-                // log("Broadcast " + dv.encode() + "END" + thisRouter.toString());
+
+                Set keys = dv.keySet();
+                Node tmp = null;
+                Iterator i = keys.iterator();
+                ArrayList<String> keysToBeRemoved = new ArrayList<String>();
+
+                System.out.println("BEFORE: \n" + distanceTable);
+
+
+                while (i.hasNext()) {
+                    String key = (String) i.next();
+                    tmp = distanceTable.getNode(key);
+                    // if (tmp == null) continue;
+
+                    if (!key.equals(thisRouter.address())) tmp.lastUpdated++;
+                    if (tmp.lastUpdated == 3) {
+                        distanceTable.remove(tmp);
+                        keysToBeRemoved.add(key);
+                    }
+                }
+
+                for (int index = 0; index < keysToBeRemoved.size(); index++) {
+                    distanceTable.removeColumn(keysToBeRemoved.get(index));
+                }
+
+                System.out.println("\n AFTER: \n" + distanceTable + "\n");
+                forwardingTable = distanceTable.calculate(thisRouter);
+
                 broadcast("dv:" + thisRouter.address() + dv.encode());
             }
         }
@@ -450,11 +477,11 @@ public class Router {
     }
 
     public void log(Object str) {
-        System.out.println(str.toString());
+        //System.out.println(str.toString());
     }
 
     public void log(String str) {
-        System.out.println(str);
+        //System.out.println(str);
     }
 
     public void log() {

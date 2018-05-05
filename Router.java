@@ -17,6 +17,7 @@ public class Router {
         if (args.length < 1 || (args.length == 1 && args[0].equals("-reverse")))
             alert("Usage: java Router [-reverse] configFile");
 
+        // check for poisoned revers and get the config file path
         boolean poisonedReverse = args[0].equals("-reverse");
         String configFile = args[0].equals("-reverse") ? args[1] : args[0];
 
@@ -73,6 +74,7 @@ public class Router {
         public void run() {
             try {
                 while (true) {
+                    // parse input
                     BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
                     String sentence = inFromUser.readLine();
                     String[] chunks = sentence.split(" ");
@@ -85,6 +87,7 @@ public class Router {
                         System.out.println("\n\033[0;33mDistance Vectors Table on this router:\033[0m");
                         System.out.println(distanceTable);
 
+                        // print out current forwardinTable if there is one generated already
                         if (forwardingTable != null) {
                             System.out.println("\n\033[0;33mForwarding Table on this router:\033[0m");
                             System.out.println(forwardingTable.toString());
@@ -93,21 +96,24 @@ public class Router {
                     case "MSG":
                         if (chunks.length != 4)
                           alert("Usage: MSG <dst-ip> <dst-port> <msg>");
-
+                        // Send message ip - port - msg
                         sendMessage(chunks[1], chunks[2], chunks[3]);
                         break;
                     case "CHANGE":
                         if (chunks.length != 4)
                           alert("Usage: CHANGE <dst-ip> <dst-port> <new-weight>");
 
+                        // update the distance table with new cost
                         distanceTable.change(
                             "/" + chunks[1], Integer.parseInt(chunks[2]),
                             Integer.parseInt(chunks[3])
                         );
 
+                        // send the weight change to the node that is connected with that link
                         DistanceVector dv = distanceTable.get(thisRouter);
                         message = "wc:" + thisRouter.address() + " " + chunks[3];
                         send(InetAddress.getByName(chunks[1]), Integer.parseInt(chunks[2]), message);
+                        // Broadcast the distance vector updates
                         broadcast("dv:" + thisRouter.address() + dv.encode());
                         break;
                     case "BROADCAST":
@@ -120,8 +126,6 @@ public class Router {
                     default:
                         break;
                     }
-
-                    log();
 
                 }
             } catch (Exception e) {
@@ -142,6 +146,7 @@ public class Router {
                 log("\uD83C\uDF0D Listening on port " + thisRouter.port);
 
                 while (true) {
+                    // parse the received data
                     byte[] receiveData = new byte[1024];
                     DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
                     socket.receive(receivePacket);
@@ -153,7 +158,7 @@ public class Router {
                             synchronized (distanceTable) {
                                 distanceTable.update(data.substring(3));
                                 log("⇅ RECEIVED:\n" + data + "\n");
-
+                                // recalculate the new distance table and update forwarding table
                                 forwardingTable = distanceTable.calculate(thisRouter);
                                 log("⟳ Updated distance table");
                                 log(distanceTable.toString());
@@ -167,6 +172,8 @@ public class Router {
                             log("⇅ RECEIVED DATA");
                             log("\t Address -> " + address);
                             log(data);
+
+                            // Send message to the next hop router
                             sendMessage(
                                 chunks[0],
                                 chunks[1],
@@ -179,12 +186,12 @@ public class Router {
                                 String[] details = tmp[0].split(":");
 
                                 log(tmp[0] + " " + tmp[1]);
-
+                                // Update distance table with new weight
                                 distanceTable.change(
                                     details[0], Integer.parseInt(details[1]),
                                     Integer.parseInt(tmp[1])
                                 );
-
+                                // broadcast new distance vector
                                 DistanceVector dv = distanceTable.get(thisRouter);
                                 broadcast("dv:" + thisRouter.address() + dv.encode());
 
@@ -226,29 +233,29 @@ public class Router {
                 DistanceVector dv = distanceTable.get(thisRouter);
 
                 Set keys = distanceTable.keySet();
-                Node tmp = null;
                 Iterator i = keys.iterator();
                 ArrayList<Node> keysToBeRemoved = new ArrayList<Node>();
 
-
+                // Check the neighbors and remove the ones that have not sent update
+                // for longer than 3 time units
                 while (i.hasNext()) {
                     Node key = (Node) i.next();
-                    // if (tmp == null) continue;
 
                     if (!key.address().equals(thisRouter.address())) key.lastUpdated++;
-                    System.out.println("LAST UPDATED " + key.address() + " " + (key.lastUpdated * updateInterval) / 1000 + "s ago");
                     if (key.lastUpdated >= 3) {
                         keysToBeRemoved.add(key);
                     }
                 }
 
+                // Remove all such nodes from distance table
+                // following removes the column as well as row for that noe
                 for (int index = 0; index < keysToBeRemoved.size(); index++) {
                     distanceTable.remove(keysToBeRemoved.get(index));
                     distanceTable.removeColumn(keysToBeRemoved.get(index).address());
                 }
 
+                // recalculate forwarding table and broadcast new distance vector
                 forwardingTable = distanceTable.calculate(thisRouter);
-
                 broadcast("dv:" + thisRouter.address() + dv.encode());
             }
         }
@@ -426,13 +433,20 @@ public class Router {
         }
     }
 
+    /**
+     * Poison the distance vector
+     * @param neighbor - Node, neighbor for which distance vector should be poisoned
+     * @param dv - DistanceVector, distance vector that is supposed to be poisoned
+     */
     public String poison (Node neighbor, DistanceVector dv) {
         DistanceVector poisonedDv = new DistanceVector();
         Set<String> keys = dv.keySet();
         String message = "";
 
+        // find the entry in the distance vector that should be changed
+        // and set it to infinity
+        // then generate new distance vector
         for (String key: keys) {
-
             if (
                 forwardingTable.containsKey(key) &&
                 forwardingTable.get(key).compareTo(neighbor) == 0 &&
@@ -448,8 +462,15 @@ public class Router {
         return message;
     }
 
+    /**
+     * Send the message to the destination
+     * @param ip - String 
+     * @param port - int
+     * @param message - String
+     */
     public void sendMessage (String ip, String port, String message) {
         try {
+            // Figure out the next hop router from forwarding table
             Node nextHop = this.forwardingTable.get("/" + ip + ":" + port);
 
             if (nextHop == null) {
@@ -459,6 +480,7 @@ public class Router {
 
             log("\t NextHop -> " + nextHop.ip.toString() + "\tIp -> " + ip);
 
+            // Figure out if message needs to be forwarded
             if (!nextHop.ip.toString().equals("/" + ip)
                 || nextHop.port != Integer.parseInt(port))
                 message = "fd:"
@@ -467,12 +489,19 @@ public class Router {
                             + nextHop.ip.getHostAddress() + ":" + nextHop.port;
 
             log("➠ Sending: " + message);
+            // Finally, send it
             send(nextHop.ip, nextHop.port, message);
         } catch (Exception e) {
             alert(e);
         }
     }
-
+ 
+    /**
+     * Send the data to the destination
+     * @param ip - String 
+     * @param port - int
+     * @param message - String
+     */
     public void send(InetAddress ip, int port, String message) {
         try {
             DatagramPacket sendPacket = new DatagramPacket(

@@ -410,7 +410,7 @@ public class Router {
                 send(neighbor.ip, neighbor.port, message);
 
                 if (message.substring(0, 3).equals("bc:"))
-                  log("➠ Broadcast message forwarded to " + neighbor.port);
+                  log("➠ Broadcast message \"" + message + "\" forwarded to " + neighbor.port);
             }
         } catch (Exception e) {
             alert(e);

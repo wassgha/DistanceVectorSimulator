@@ -236,7 +236,7 @@ public class Router {
                     // if (tmp == null) continue;
 
                     if (!key.address().equals(thisRouter.address())) key.lastUpdated++;
-                    System.out.println("LAST UPDATED " + key.address() + " " + key.lastUpdated);
+                    System.out.println("LAST UPDATED " + key.address() + " " + key.lastUpdated * updateInterval + "s ago");
                     if (key.lastUpdated >= 3) {
                         keysToBeRemoved.add(key);
                     }

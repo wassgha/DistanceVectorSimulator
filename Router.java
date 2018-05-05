@@ -59,6 +59,7 @@ public class Router {
     private DatagramSocket socket;
     private boolean poisonedReverse;
     private long updateInterval = 10000;
+    private int currentTime = 0;
 
     /**********************
      * Threads *
@@ -148,7 +149,10 @@ public class Router {
                 while (true) {
                     // parse the received data
                     byte[] receiveData = new byte[1024];
-                    DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+                    DatagramPacket receivePacket = new DatagramPacket(
+                                                          receiveData,
+                                                          receiveData.length
+                                                   );
                     socket.receive(receivePacket);
                     String data = new String(receivePacket.getData());
 
@@ -157,9 +161,14 @@ public class Router {
                         case "dv:":
                             synchronized (distanceTable) {
                                 distanceTable.update(data.substring(3));
-                                log("⇅ RECEIVED:\n" + data + "\n");
+                                log("⇅ RECEIVED NEW DV FROM "
+                                    + receivePacket.getAddress()
+                                    + ":" + receivePacket.getPort()
+                                    + ":\n" + data + "\n");
                                 // recalculate the new distance table and update forwarding table
-                                forwardingTable = distanceTable.calculate(thisRouter);
+                                forwardingTable = distanceTable.calculate(
+                                                      thisRouter
+                                                  );
                                 log("⟳ Updated distance table");
                                 log(distanceTable.toString());
                                 log("⟳ Updated forwarding table");
@@ -167,10 +176,15 @@ public class Router {
                             }
                             break;
                         case "fd:":
-                            String address = data.substring(3, data.indexOf('\n'));
+                            String address = data.substring(
+                                                  3,
+                                                  data.indexOf('\n')
+                                              );
                             String[] chunks = address.split(":");
-                            log("⇅ RECEIVED DATA");
-                            log("\t Address -> " + address);
+                            log("⇅ MESSAGE FROM "
+                                  + receivePacket.getAddress()
+                                  + ":" + receivePacket.getPort()
+                                  + " FORWARDED TO " + address);
                             log(data);
 
                             // Send message to the next hop router
@@ -182,25 +196,31 @@ public class Router {
                             break;
                         case "wc:":
                             synchronized (distanceTable) {
-                                String[] tmp = data.substring(3).trim().split(" ");
+                                String[] tmp = data.substring(3).trim()
+                                                .split(" ");
                                 String[] details = tmp[0].split(":");
 
-                                log(tmp[0] + " " + tmp[1]);
+                                log("⇅ NEW WEIGHT TO NEIGHBOR " + tmp[0]
+                                     + " OF " + tmp[1] + "\n");
+
                                 // Update distance table with new weight
                                 distanceTable.change(
                                     details[0], Integer.parseInt(details[1]),
                                     Integer.parseInt(tmp[1])
                                 );
                                 // broadcast new distance vector
-                                DistanceVector dv = distanceTable.get(thisRouter);
-                                broadcast("dv:" + thisRouter.address() + dv.encode());
+                                DistanceVector dv = distanceTable
+                                                      .get(thisRouter);
+                                broadcast("dv:" + thisRouter.address()
+                                          + dv.encode());
 
                                 log(distanceTable);
                             }
                             break;
                           case "bc:":
                             synchronized (distanceTable) {
-                              log("⇅ RECEIVED BROADCAST : " + data.substring(3).trim());
+                              log("⇅ RECEIVED BROADCAST : "
+                                  + data.substring(3).trim());
                               broadcast(
                                   data.trim(),
                                   true
@@ -228,7 +248,9 @@ public class Router {
     public class TimedUpdateThread extends TimerTask {
         @Override
         public void run() {
-            log("➠ Broadcasting periodical updates... ");
+            currentTime++;
+            log("➠ Update sent to all neighbors at time "
+                 + (currentTime * updateInterval)/1000 + "s... ");
             synchronized (distanceTable) {
                 DistanceVector dv = distanceTable.get(thisRouter);
 
@@ -241,17 +263,20 @@ public class Router {
                 while (i.hasNext()) {
                     Node key = (Node) i.next();
 
-                    if (!key.address().equals(thisRouter.address())) key.lastUpdated++;
-                    if (key.lastUpdated >= 3) {
+                    if (!key.address().equals(thisRouter.address()))
+                      key.lastUpdated++;
+
+                    if (key.lastUpdated >= 3)
                         keysToBeRemoved.add(key);
-                    }
                 }
 
                 // Remove all such nodes from distance table
                 // following removes the column as well as row for that noe
                 for (int index = 0; index < keysToBeRemoved.size(); index++) {
                     distanceTable.remove(keysToBeRemoved.get(index));
-                    distanceTable.removeColumn(keysToBeRemoved.get(index).address());
+                    distanceTable.removeColumn(
+                        keysToBeRemoved.get(index).address()
+                    );
                 }
 
                 // recalculate forwarding table and broadcast new distance vector
@@ -340,7 +365,9 @@ public class Router {
                 this.distanceTable.put(neighbor, new DistanceVector());
                 this.forwardingTable.put(ip.toString() + ":" + port, neighbor);
 
-                log("✓ Added node: IP (" + ip + ") , Port (" + port + "), Cost " + cost);
+                log("✓ Added node: IP (" + ip
+                    + ") , Port (" + port
+                    + "), Cost " + cost);
             }
 
             // After adding all the neighbors to the dv, adds it to the distance table
@@ -387,10 +414,18 @@ public class Router {
             // node came on the shortest path from its source
             if (message.substring(0, 3).equals("bc:") && reversePathForward) {
               broadcastIps = message.substring(3).trim().split(" ");
-              broadcastIps =  Arrays.copyOfRange(broadcastIps, 1, broadcastIps.length);
+              broadcastIps = Arrays.copyOfRange(
+                                broadcastIps,
+                                1,
+                                broadcastIps.length
+                             );
 
-              lastAddress = broadcastIps.length >= 1 ? broadcastIps[broadcastIps.length - 1] : thisRouter.address();
-              sourceAddress = broadcastIps.length >= 1 ? broadcastIps[0] : lastAddress;
+              lastAddress   = broadcastIps.length >= 1 ?
+                                broadcastIps[broadcastIps.length - 1] :
+                                thisRouter.address();
+              sourceAddress = broadcastIps.length >= 1 ?
+                                broadcastIps[0] :
+                                lastAddress;
 
               if (this.forwardingTable.containsKey(sourceAddress) &&
                   !this.forwardingTable.get(sourceAddress).address().equals(lastAddress)) {
@@ -426,7 +461,9 @@ public class Router {
                 send(neighbor.ip, neighbor.port, message);
 
                 if (message.substring(0, 3).equals("bc:"))
-                  log("➠ Broadcast message \"" + message + "\" forwarded to " + neighbor.port);
+                  log("➠ Broadcast message \"" + message
+                      + "\" propagated to "
+                      + neighbor.port);
             }
         } catch (Exception e) {
             alert(e);
@@ -464,7 +501,7 @@ public class Router {
 
     /**
      * Send the message to the destination
-     * @param ip - String 
+     * @param ip - String
      * @param port - int
      * @param message - String
      */
@@ -477,8 +514,6 @@ public class Router {
                 System.out.println("No entry in forwarding table -> Dropping");
                 return;
             }
-
-            log("\t NextHop -> " + nextHop.ip.toString() + "\tIp -> " + ip);
 
             // Figure out if message needs to be forwarded
             if (!nextHop.ip.toString().equals("/" + ip)
@@ -495,10 +530,10 @@ public class Router {
             alert(e);
         }
     }
- 
+
     /**
      * Send the data to the destination
-     * @param ip - String 
+     * @param ip - String
      * @param port - int
      * @param message - String
      */

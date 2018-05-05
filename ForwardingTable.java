@@ -10,6 +10,7 @@ public class ForwardingTable extends TreeMap<String, Node> {
     }
     /*
      * Converts TreeMap into nicely formatted string
+     * @return String -  nicely formatted String
      */
     public String toString() {
       String result = "";

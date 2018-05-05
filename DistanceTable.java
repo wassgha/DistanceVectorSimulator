@@ -10,7 +10,7 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
 
     public DistanceTable(Router router) {
         super();
-
+        // Router where this distance table exists
         this.router = router;
     }
 
@@ -62,7 +62,12 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
       Node targetNode = getNode(firstLine[0], firstLine[1]);
       boolean oldNeighbor = targetNode == null;
 
-      // System.out.println();
+      // check if this is distance vector of a neighbor 
+      // that went offline and is back online
+      // if so create new node and add it among neighbors
+      // otherwise check that distance vector for that 
+      // node exists, if not just ignore it, since it is not
+      // neighbor
       if (oldNeighbor) {
         targetNode = new Node(
           InetAddress.getByName(firstLine[0].substring(1)),
@@ -81,12 +86,16 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
         String[] line = lines[i].split(",");
         String entry = line[0];
         Integer cost = Integer.parseInt(line[1].trim());
-
-        if (!this.get(router.node()).containsKey(entry) && router.neighbors.containsKey(entry) && !oldNeighbor) continue;
+        // If there is no column for that node, and this node is not old neighbor just continue the loop
+        // this statement is used when node goes offlin and comes back online after some time, and other nodes
+        // have to reinsert it back and increase number of columns
+        if (!this.get(router.node()).containsKey(entry) && router.neighbors.containsKey(entry) && !oldNeighbor) 
+          continue;
         newDV.put(entry, cost);
 
       }
 
+      // reset the lastUpdated property
       targetNode.lastUpdated = 0;
       this.put(targetNode, newDV);
     }
@@ -131,7 +140,7 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
     }
 
     /*
-     * Finds the node in the table given it's IP and port
+     * Finds the node in the table given its IP and port
      *
      * @param ip string version of INetAddress
      * @param port string version of port #
@@ -146,11 +155,25 @@ public class DistanceTable extends TreeMap<Node, DistanceVector> {
       return null;
     }
 
+     /*
+     * Finds the node in the table given its address
+     *
+     * @param address - ip + ":" + port
+     * @return Node object for row in table
+     */
     public Node getNode(String address) {
      String[] chunks = address.split(":");
      return getNode(chunks[0], chunks[1]);
     }
 
+
+    /**
+     * Remove column from distance table
+     * used when one of the nodes goes offline and
+     * the others have to drop it.
+     * 
+     * @param key - String
+     */
     public void removeColumn (String key) {
       System.out.println("Removing column " + key);
       Set<Node> nodes = this.keySet();

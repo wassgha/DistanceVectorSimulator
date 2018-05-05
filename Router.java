@@ -152,7 +152,7 @@ public class Router {
                         case "dv:":
                             synchronized (distanceTable) {
                                 distanceTable.update(data.substring(3));
-                                log("Received:\n" + data + "\n");
+                                log("⇅ RECEIVED:\n" + data + "\n");
 
                                 forwardingTable = distanceTable.calculate(thisRouter);
                                 log("⟳ Updated distance table");
@@ -165,7 +165,7 @@ public class Router {
                             String address = data.substring(3, data.indexOf('\n'));
                             String[] chunks = address.split(":");
                             log("⇅ RECEIVED DATA");
-                            log("Address -> " + address);
+                            log("\t Address -> " + address);
                             log(data);
                             sendMessage(
                                 chunks[0],
@@ -295,7 +295,7 @@ public class Router {
      * @param configFile path to the configuration file
      */
     public void initRouter(String configFile) {
-        log("⌛ Reading neighbor nodes...");
+        log("◴ Reading neighbor nodes...");
 
         // Parse configuration file
         try {
@@ -380,7 +380,7 @@ public class Router {
               broadcastIps = message.substring(3).trim().split(" ");
               broadcastIps =  Arrays.copyOfRange(broadcastIps, 1, broadcastIps.length);
 
-              String lastAddress = broadcastIps[broadcastIps.length - 1];
+              String lastAddress = broadcastIps.length > 1 ? broadcastIps[broadcastIps.length - 2] : thisRouter.address();
               String sourceAddress = broadcastIps.length >= 1 ? broadcastIps[0] : lastAddress;
 
               if (this.forwardingTable.containsKey(sourceAddress) &&
@@ -448,7 +448,7 @@ public class Router {
                 return;
             }
 
-            log("NextHop -> " + nextHop.ip.toString() + "\tIp -> " + ip);
+            log("\t NextHop -> " + nextHop.ip.toString() + "\tIp -> " + ip);
 
             if (!nextHop.ip.toString().equals("/" + ip)
                 || nextHop.port != Integer.parseInt(port))
@@ -457,7 +457,7 @@ public class Router {
                             + message + " "
                             + nextHop.ip.getHostAddress() + ":" + nextHop.port;
 
-            log("Sending: " + message);
+            log("➠ Sending: " + message);
             send(nextHop.ip, nextHop.port, message);
         } catch (Exception e) {
             alert(e);

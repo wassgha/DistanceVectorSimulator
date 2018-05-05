@@ -114,7 +114,7 @@ public class Router {
                         if (chunks.length != 2)
                           alert("Usage: BROADCAST <msg>");
 
-                        message = "bc: " + chunks[1] + " " + thisRouter.address();
+                        message = "bc: " + chunks[1];
                         broadcast(message, true);
                         break;
                     default:
@@ -195,7 +195,7 @@ public class Router {
                             synchronized (distanceTable) {
                               log("⇅ RECEIVED BROADCAST : " + data.substring(3).trim());
                               broadcast(
-                                  data.trim() + " " + thisRouter.address(),
+                                  data.trim(),
                                   true
                               );
                               break;
@@ -236,7 +236,7 @@ public class Router {
                     // if (tmp == null) continue;
 
                     if (!key.address().equals(thisRouter.address())) key.lastUpdated++;
-                    System.out.println("LAST UPDATED " + key.address() + " " + key.lastUpdated * updateInterval + "s ago");
+                    System.out.println("LAST UPDATED " + key.address() + " " + (key.lastUpdated * updateInterval) / 1000 + "s ago");
                     if (key.lastUpdated >= 3) {
                         keysToBeRemoved.add(key);
                     }
@@ -368,6 +368,8 @@ public class Router {
             // Contains all the IP addresses the message was broadcasted to in
             // case of a bc: message
             String[] broadcastIps = new String[0];
+            String lastAddress = "";
+            String sourceAddress = "";
 
             DistanceVector dv = null;
             if (message.substring(0, 3).equals("dv:")) {
@@ -380,27 +382,34 @@ public class Router {
               broadcastIps = message.substring(3).trim().split(" ");
               broadcastIps =  Arrays.copyOfRange(broadcastIps, 1, broadcastIps.length);
 
-              String lastAddress = broadcastIps.length > 1 ? broadcastIps[broadcastIps.length - 2] : thisRouter.address();
-              String sourceAddress = broadcastIps.length >= 1 ? broadcastIps[0] : lastAddress;
+              lastAddress = broadcastIps.length >= 1 ? broadcastIps[broadcastIps.length - 1] : thisRouter.address();
+              sourceAddress = broadcastIps.length >= 1 ? broadcastIps[0] : lastAddress;
 
               if (this.forwardingTable.containsKey(sourceAddress) &&
                   !this.forwardingTable.get(sourceAddress).address().equals(lastAddress)) {
                     log("✖ Broadcast message rejected (reverse path forwarding)");
                     return;
               }
+
+              if (Arrays.asList(broadcastIps).contains(thisRouter.address())) {
+                log("✖ Broadcast message rejected (already received)");
+                return;
+              }
+
+              message += " " + thisRouter.address();
             }
 
             // Broadcast the message to all neighboring nodes
-            broadcasting: while (it.hasNext()) {
+            while (it.hasNext()) {
                 Node neighbor = (Node) ((Map.Entry) it.next()).getKey();
                 // Don't broadcast to self
                 if (neighbor.address().equals(thisRouter.address()))
                     continue;
 
-                // Do not broadcast to nodes that already received the message
+                // Do not broadcast to the node that this message came from
                 if (message.substring(0, 3).equals("bc:")
-                    && Arrays.asList(broadcastIps).contains(neighbor.address()))
-                    continue broadcasting;
+                    && lastAddress.equals(neighbor.address()))
+                    continue;
 
                 // poison reverse
                 if (dv != null && this.poisonedReverse) {
